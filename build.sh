@@ -1,0 +1,1 @@
+gcc -I./headers src/*.c main.c -o main
