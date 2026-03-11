@@ -11,9 +11,11 @@ typedef struct
 
 extern CommandMapClient client_dispatch_table[];
 
-int sendToServer(char *command , char *SERVER_IP);
+int sendToServer(char *command, char *SERVER_IP);
 
 void handle_exit(int sock);
+
+void handle_connect_client(int sock);
 
 void handleStatus(int sock);
 

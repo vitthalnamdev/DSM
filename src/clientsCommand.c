@@ -12,18 +12,22 @@ CommandMapClient client_dispatch_table[] = {
     {"listConnections", handle_list_connections},
     {"status", handleStatus},
     {"exit", handle_exit},
+    {"connect", handle_connect_client},
     {NULL, NULL} // Sentinel value to mark the end
 };
 
+#define BROADCAST_PORT 8080 // Ensure your server is listening on this UDP port
 #define BUFFER_SIZE 1024
-char buffer[BUFFER_SIZE];
+#define ANSI_COLOR_GREEN "\x1b[32m"
+#define ANSI_COLOR_RESET "\x1b[0m"
 
+char buffer[BUFFER_SIZE];
+char command[1024];
 
 void handle_exit(int sock)
 {
     exit(0);
 }
-
 
 void handleStatus(int sock)
 {
@@ -39,29 +43,89 @@ void handleStatus(int sock)
     }
 }
 
- 
+void handle_connect_client(int sock)
+{
 
-#define BROADCAST_PORT 8080 // Ensure your server is listening on this UDP port
-#define BUFFER_SIZE 1024
+    char ip_input[100];
+
+    printf("Enter the IP address of the server to connect: ");
+
+    fflush(stdout);
+
+    if (fgets(ip_input, sizeof(ip_input), stdin) != NULL)
+    {
+        ip_input[strcspn(ip_input, "\n")] = 0; // Remove the newline
+    }
+
+    struct sockaddr_in serv_addr;
+    char command[1024];
+    char buffer[1024];
+
+    // 1. Open connection ONCE
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        return;
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(8080);
+    inet_pton(AF_INET, ip_input, &serv_addr.sin_addr);
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+        printf("Connection Failed\n");
+        return;
+    }
+
+    // 2. Keep it open for multiple commands
+    while (1)
+    {
+        printf(ANSI_COLOR_GREEN "\nDevices/%s > " ANSI_COLOR_RESET, ip_input);
+        fgets(command, sizeof(command), stdin);
+        command[strcspn(command, "\n")] = 0;
+
+        if (strcmp(command, "exit") == 0)
+            break;
+
+        // Send command through the persistent socket
+        send(sock, command, strlen(command), 0);
+
+        // Receive response
+        int valread = read(sock, buffer, sizeof(buffer) - 1);
+        if (valread > 0)
+        {
+            buffer[valread] = '\0';
+            printf("Server: %s\n", buffer);
+        }
+        else
+        {
+            printf("Connection lost.\n");
+            break;
+        }
+    }
+
+    // 3. Close only when finished
+    close(sock);
+}
 
 // This replaces your entire handle_list_connections loop logic
-void handle_list_connections(int unused_sock) 
+void handle_list_connections(int unused_sock)
 {
     printf("Scanning network for active servers via UDP Broadcast...\n");
-    
+
     int sock;
     struct sockaddr_in broadcast_addr;
     int broadcast_enable = 1;
     char buffer[BUFFER_SIZE];
-    
+
     // 1. Create UDP Socket (SOCK_DGRAM)
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+    {
         perror("Socket creation failed");
         return;
     }
 
     // 2. Enable Broadcast permission on the socket
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0) {
+    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0)
+    {
         perror("Setsockopt (SO_BROADCAST) failed");
         close(sock);
         return;
@@ -69,9 +133,10 @@ void handle_list_connections(int unused_sock)
 
     // 3. Set a Timeout (So we don't wait forever if no one responds)
     struct timeval tv;
-    tv.tv_sec = 1;  // Wait 1 second for replies
+    tv.tv_sec = 1; // Wait 1 second for replies
     tv.tv_usec = 0;
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+    {
         perror("Setsockopt (SO_RCVTIMEO) failed");
     }
 
@@ -79,23 +144,25 @@ void handle_list_connections(int unused_sock)
     memset(&broadcast_addr, 0, sizeof(broadcast_addr));
     broadcast_addr.sin_family = AF_INET;
     broadcast_addr.sin_port = htons(BROADCAST_PORT);
-    broadcast_addr.sin_addr.s_addr = inet_addr("255.255.255.255"); 
+    broadcast_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
 
     // 5. Send the discovery command
     char *command = "status";
-    sendto(sock, command, strlen(command), 0, (struct sockaddr*)&broadcast_addr, sizeof(broadcast_addr));
+    sendto(sock, command, strlen(command), 0, (struct sockaddr *)&broadcast_addr, sizeof(broadcast_addr));
 
     // 6. Collect all responses
     struct sockaddr_in server_addr;
     socklen_t addr_len = sizeof(server_addr);
     int found_count = 0;
 
-    while (1) {
-        int valread = recvfrom(sock, buffer, sizeof(buffer) - 1, 0, (struct sockaddr*)&server_addr, &addr_len);
-        
-        if (valread < 0) {
+    while (1)
+    {
+        int valread = recvfrom(sock, buffer, sizeof(buffer) - 1, 0, (struct sockaddr *)&server_addr, &addr_len);
+
+        if (valread < 0)
+        {
             // Likely timed out (EAGAIN/EWOULDBLOCK), which means no more servers responding
-            break; 
+            break;
         }
 
         buffer[valread] = '\0';
@@ -103,7 +170,8 @@ void handle_list_connections(int unused_sock)
         found_count++;
     }
 
-    if (found_count == 0) {
+    if (found_count == 0)
+    {
         printf("No active servers found on the local network.\n");
     }
 
@@ -153,13 +221,12 @@ int sendToServer(char *command, char *SERVER_IP)
 
 void *commands(void *args)
 {
-    char command[1024];
 
     SharedData *mesh_info = ((struct commands_args *)args)->mesh_info;
 
     while (1)
     {
-        printf("\n> ");
+        printf(ANSI_COLOR_GREEN "\n> " ANSI_COLOR_RESET);
         fflush(stdout); // Ensure prompt shows up
 
         if (fgets(command, sizeof(command), stdin) != NULL)

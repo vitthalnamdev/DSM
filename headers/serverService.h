@@ -11,6 +11,8 @@ typedef struct
 
 void handle_status_check(int sock);
 
+void handle_connect_server(int sock);
+
 extern CommandMapServer server_dispatch_table[];
 
 #endif
