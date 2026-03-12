@@ -1,5 +1,11 @@
 #ifndef SERVER_SERVICE_H
 #define SERVER_SERVICE_H
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 typedef void (*command_handler_t)(int);
 
