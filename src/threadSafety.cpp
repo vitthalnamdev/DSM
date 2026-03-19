@@ -1,4 +1,4 @@
-#include "../headers/threadSafety.h"
+#include "../headers/threadSafety.hpp"
 
 SharedData mesh_info = {
     .lock = PTHREAD_MUTEX_INITIALIZER,

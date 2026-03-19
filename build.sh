@@ -1,9 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 rm -f *.o main
-g++ -I./headers \
-    main.c \
-    src/*.c \
-    src/clientsCommands/*.c \
-    src/serverCommands/*.c \
-    src/shareFileService/*.cpp \
-    -luring \
+
+g++ -std=c++17 -I./headers \
+    main.cpp \
+    $(find src -name '*.cpp') \
+    -luring -pthread \
     -o main

@@ -1,4 +1,4 @@
-#include "../../headers/clientsCommand.h"
+#include "../../headers/clientsCommand.hpp"
 
 void handle_connect_client(int sock)
 {
@@ -21,6 +21,9 @@ void handle_connect_client(int sock)
         close(sock);
         return;
     }
+
+   // TODO:  handle, the logic to ask the I.P that the user wants to connect with, if it wants to connect with my I.P.
+   // if yes , connect otherwise don't show.
 
     // 2. Keep it open for multiple commands
     while (1)

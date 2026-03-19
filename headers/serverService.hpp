@@ -21,6 +21,10 @@ void handle_connect_server(int sock);
 
 void handle_share_file_server(int sock);
 
+extern int OPEN_RECEIVE_FILE_CONNECTION;
+
+void handle_receive_file_server(int sock);
+
 extern CommandMapServer server_dispatch_table[];
 
 #endif

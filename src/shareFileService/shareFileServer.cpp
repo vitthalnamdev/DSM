@@ -1,17 +1,13 @@
-#include "../../headers/serverService.h"
-#include <iostream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <cstring>
-#include <sys/socket.h>
-#include <sys/stat.h>
+#include "../../headers/serverService.hpp"
+#include "../../headers/shareFile.hpp"
+#include "../../headers/Status_codes.hpp"
+#include "../../headers/clientsCommand.hpp"
 
 #define PORT 8080
 #define BLOCK_SIZE_ 65536
 
 // Receive exactly len bytes from socket
-bool recv_all(int sock, void *buf, size_t len)
+int recv_all(int sock, void *buf, size_t len)
 {
     char *ptr = static_cast<char *>(buf);
 
@@ -153,10 +149,20 @@ void receive_file(int sock)
         std::cout << "Incomplete file received: " << outpath
                   << " (" << received << "/" << filesize << " bytes)\n";
     }
+    OPEN_RECEIVE_FILE_CONNECTION = 0; // Reset the flag after handling the file transfer
 }
 
 // Handle shareFile command
 void handle_share_file_server(int sock)
 {
+
+    if(OPEN_RECEIVE_FILE_CONNECTION==0)
+    {
+        send(sock, STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION], strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
+        return;
+    }
+
+
+    send(sock, STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]), 0);
     receive_file(sock);
 }

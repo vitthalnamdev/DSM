@@ -1,18 +1,26 @@
-#include "../headers/clientsCommand.h"
-#include "../headers/threadSafety.h"
+#include "../headers/clientsCommand.hpp"
+#include "../headers/threadSafety.hpp"
+#include "../headers/Status_codes.hpp"
 
 CommandMapClient client_dispatch_table[] = {
     {"listConnections", handle_list_connections},
     {"status", handleStatus},
     {"exit", handle_exit},
     {"connect", handle_connect_client},
+    {"sendFile", handle_send_file},
+    {"receiveFile", handle_receive_file},
     {NULL, NULL} // Sentinel value to mark the end
 };
 
 char buffer[BUFFER_SIZE] = {0};
 char command[BUFFER_SIZE] = {0};
 
-int sendToServer(int sock, const char *command, const char *SERVER_IP)
+char **ip_list = NULL;
+char **ip_status = NULL;
+const char *SELFIP = "127.0.0.1";
+
+
+char *sendToServer(int sock, const char *command, const char *SERVER_IP)
 {
     connect_socket(sock, SERVER_IP);
 
@@ -20,18 +28,22 @@ int sendToServer(int sock, const char *command, const char *SERVER_IP)
 
     int valread = read(sock, buffer, sizeof(buffer));
 
-    int established_connection = 0;
-
     if (valread > 0)
     {
         buffer[valread] = '\0';
-        established_connection = 1;
+
+        char *result = (char *)malloc(valread + 1); // +1 for '\0'
+        if (!result)
+            return NULL;
+
+        memcpy(result, buffer, valread + 1); // copy only valid bytes
+        return result;
     }
     else
     {
-        printf("Failed to connect to server at %s\n", SERVER_IP);
+        char *err = (char *)STATUS_MESSAGES[CONNECTION_ERROR];
+        return err;
     }
-    return established_connection;
 }
 
 int create_socket(void)

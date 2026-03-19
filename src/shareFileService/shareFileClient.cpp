@@ -1,17 +1,11 @@
-#include "../../headers/clientsCommand.h"
-#include <iostream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <liburing.h>
-#include <sys/stat.h>
-#include <cstring>
-#include <sys/socket.h>
+#include "../../headers/shareFile.hpp"
+#include "../../headers/Status_codes.hpp"
+#include "../../headers/clientsCommand.hpp" 
 
 #define QUEUE_DEPTH 64
 #define BLOCK_SIZE_ 65536
 
-bool send_all_sync(int sock, const void *data, size_t len)
+int send_all_sync(int sock, const void *data, size_t len)
 {
     const char *ptr = static_cast<const char *>(data);
     while (len > 0)
@@ -25,7 +19,7 @@ bool send_all_sync(int sock, const void *data, size_t len)
     return true;
 }
 
-bool send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
+int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
 {
     size_t offset = 0;
 
@@ -59,7 +53,7 @@ bool send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
     return true;
 }
 
-bool send_file(int sock, const char *filename, const char *IP)
+int send_file(int sock, const char *filename, const char *IP)
 { 
     if (sock < 0)
     {
@@ -127,66 +121,4 @@ bool send_file(int sock, const char *filename, const char *IP)
     close(file);
     io_uring_queue_exit(&ring);
     return true;
-}
-
-void handle_share_file_client(int sock)
-{
-    // TODO: [Implementation] If, only for sending file , or this function is called, Then I have to show through UI (the percentage of file sent) , and also the file name that is being sent, and the I.P to which it is being sent.
-    printf("Enter the I.P that you want to share the file with: ");
-    char IP[16];
-    if (!fgets(IP, sizeof(IP), stdin))
-    {
-        std::cerr << "Failed to read IP address\n";
-        return;
-    }
-
-    IP[strcspn(IP, "\n")] = 0;
-
-    const char *command = "shareFile";
-    uint32_t cmdlen = strlen(command);
-
-    if (!send_all_sync(sock, command, cmdlen))
-    {
-        std::cerr << "Failed to send command\n";
-        close(sock);
-        return;
-    }
-
-    printf("Enter the file address that you want to share: ");
-    char filename[256];
-    if (!fgets(filename, sizeof(filename), stdin))
-    {
-        std::cerr << "Failed to read filename\n";
-        close(sock);
-        return;
-    }
-
-    filename[strcspn(filename, "\n")] = 0;
-
-    printf("Sharing file %s with %s...\n", filename, IP);
-
-    bool file_sent = send_file(sock , filename, IP);
-
-    if (!file_sent)
-    {
-        printf("Failed to share file with %s\n", IP);
-        close(sock);
-        return;
-    }
-
-    char response[128];
-    int valread = read(sock, response, sizeof(response) - 1);
-
-    if (valread > 0)
-    {
-        response[valread] = '\0';
-        printf("Server response: %s\n", response);
-        printf("File shared successfully with %s\n", IP);
-    }
-    else
-    {
-        printf("Failed to share file with %s\n", IP);
-    }
-
-    close(sock);
 }

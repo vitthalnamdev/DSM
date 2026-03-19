@@ -1,7 +1,7 @@
-#include "../headers/connection.h"
-#include "../headers/clientsCommand.h"
-#include "../headers/serverService.h"
-#include "../headers/threadSafety.h"
+#include "../headers/connection.hpp"
+#include "../headers/clientsCommand.hpp"
+#include "../headers/serverService.hpp"
+#include "../headers/threadSafety.hpp"
 
 void connection()
 {
