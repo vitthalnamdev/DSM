@@ -101,6 +101,11 @@ void receive_file(int sock)
     char buffer[BLOCK_SIZE_];
     uint64_t received = 0;
 
+    TransferStats stats;
+    ProgressUI ui;
+
+    stats.start(filesize);
+
     // Receive file content
     while (received < filesize)
     {
@@ -128,7 +133,11 @@ void receive_file(int sock)
         }
 
         received += bytes;
+        stats.update(bytes);
+        ui.render(stats);
     }
+
+    ui.done();
 
     // Close file after writing
     close(file);
@@ -156,12 +165,11 @@ void receive_file(int sock)
 void handle_share_file_server(int sock)
 {
 
-    if(OPEN_RECEIVE_FILE_CONNECTION==0)
+    if (OPEN_RECEIVE_FILE_CONNECTION == 0)
     {
         send(sock, STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION], strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
         return;
     }
-
 
     send(sock, STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]), 0);
     receive_file(sock);

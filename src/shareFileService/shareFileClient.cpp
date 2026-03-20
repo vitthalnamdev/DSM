@@ -1,6 +1,6 @@
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
-#include "../../headers/clientsCommand.hpp" 
+#include "../../headers/clientsCommand.hpp"
 
 #define QUEUE_DEPTH 64
 #define BLOCK_SIZE_ 65536
@@ -54,13 +54,34 @@ int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
 }
 
 int send_file(int sock, const char *filename, const char *IP)
-{ 
+{
     if (sock < 0)
     {
         std::cerr << "Failed to create socket\n";
         return false;
     }
     connect_socket(sock, IP);
+
+    const char *command = "shareFile";
+
+    if (!send_all_sync(sock, command, strlen(command)))
+    {
+        perror("Failed to send command");
+        close(sock);
+        return -1;
+    }
+
+    char response[128];
+    int valread = read(sock, response, sizeof(response) - 1);
+    response[valread] = '\0';
+    if (strcmp(response, STATUS_MESSAGES[SUCCESS]) != 0)
+    {
+        printf("Server response: %s\n", response);
+        printf("Cannot share file with %s. Reason: %s\n", IP, response);
+        close(sock);
+        return -1;
+    }
+
     io_uring ring;
     int ret = io_uring_queue_init(QUEUE_DEPTH, &ring, 0);
     if (ret < 0)
@@ -97,6 +118,11 @@ int send_file(int sock, const char *filename, const char *IP)
         return false;
     }
 
+    TransferStats stats;
+    ProgressUI ui;
+
+    stats.start(filesize);
+
     char buffer[BLOCK_SIZE_];
     while (true)
     {
@@ -116,9 +142,13 @@ int send_file(int sock, const char *filename, const char *IP)
             close(file);
             return false;
         }
+
+        stats.update(bytes);
+        ui.render(stats);
     }
 
     close(file);
+    ui.done();
     io_uring_queue_exit(&ring);
     return true;
 }
