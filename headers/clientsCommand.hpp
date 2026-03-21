@@ -9,6 +9,8 @@
 #include <sys/time.h>
 #include <sys/select.h>
 #include <termios.h>
+#include <signal.h>
+ 
 
 typedef void (*command_handler_t)(int);
 

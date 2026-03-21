@@ -3,30 +3,57 @@
 
 struct termios orig_termios;
 
-void enable_raw_mode()
-{
-    tcgetattr(STDIN_FILENO, &orig_termios);
-    struct termios raw = orig_termios;
-    raw.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-}
+/* ---------------- Terminal Handling ---------------- */
 
 void disable_raw_mode()
 {
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
 }
 
+void enable_raw_mode()
+{
+    tcgetattr(STDIN_FILENO, &orig_termios);
+
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ICANON | ECHO);
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+}
+
+/* ---------------- Cleanup Handlers ---------------- */
+
+void cleanup()
+{
+    disable_raw_mode();
+}
+
+void handle_sigint(int sig)
+{
+    (void)sig;
+    disable_raw_mode();
+    printf("\nTerminal restored. Exiting...\n");
+    exit(0);
+}
+
+/* ---------------- Main Logic ---------------- */
+
 void handle_receive_file(int sock)
 {
     printf("Press Q to exit.\n");
 
-    char *result = sendToServer(sock, "receiveFile", SELFIP);
+    // Register cleanup mechanisms
+    signal(SIGINT, handle_sigint);
+    atexit(cleanup);
+
+    const char command[16] = "receiveFile";
+
+    char *result = sendToServer(sock, command, SELFIP);
 
     if (strcmp(result, STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]) == 0)
     {
         printf("Waiting to receive file from server...\n");
 
-        enable_raw_mode();  
+        enable_raw_mode();
 
         while (1)
         {
@@ -44,20 +71,40 @@ void handle_receive_file(int sock)
             if (activity > 0 && FD_ISSET(STDIN_FILENO, &readfds))
             {
                 char ch;
-                read(STDIN_FILENO, &ch, 1);  
+                ssize_t n = read(STDIN_FILENO, &ch, 1);
 
-                if (ch == 'Q' || ch == 'q')
+                if (n > 0)
                 {
-                    printf("\nExiting...\n");
-                    // send a message to server to stop sending file.
-                    break;
+                    if (ch == 'Q' || ch == 'q')
+                    {
+                        printf("\nExiting...\n");
+
+                        // TODO: notify server to stop sending file
+                        // send(sock, "STOP", 4, 0);
+
+                        break;
+                    }
                 }
             }
 
-            // 👉 recv(sock, buffer, size, 0);
+            /* ---------------- File Receive Logic ---------------- */
+            // Example placeholder:
+            // char buffer[4096];
+            // int bytes = recv(sock, buffer, sizeof(buffer), 0);
+            // if (bytes > 0) {
+            //     write(file_fd, buffer, bytes);
+            // }
+            // else if (bytes == 0) {
+            //     printf("\nFile transfer complete.\n");
+            //     break;
+            // }
+            // else {
+            //     perror("recv");
+            //     break;
+            // }
         }
 
-        disable_raw_mode(); // restore terminal
+        disable_raw_mode(); // restore terminal on normal exit
     }
     else
     {
