@@ -2,15 +2,15 @@
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
 
-void handle_send_file(int sock)
+void handle_send_file()
 {
+
     // TODO: [Implementation] If, only for sending file , or this function is called, Then I have to show through UI (the percentage of file sent) , and also the file name that is being sent, and the I.P to which it is being sent.
     printf("Enter the I.P that you want to share the file with: ");
     char IP[16];
     if (!fgets(IP, sizeof(IP), stdin))
     {
         perror("Failed to read IP address");
-        close(sock);
         return;
     }
 
@@ -23,7 +23,6 @@ void handle_send_file(int sock)
     if (!fgets(filename, sizeof(filename), stdin))
     {
         perror("Failed to read the filename.");
-        close(sock);
         return;
     }
 
@@ -31,9 +30,13 @@ void handle_send_file(int sock)
 
     printf("Sharing file %s with %s...\n", filename, IP);
 
-    int file_sent = send_file(sock, filename, IP);
+    // creating and connecting socket.
+    int sock = create_socket();
+    connect_socket(sock, IP);
 
-    if (!file_sent)
+    int file_sent = send_file(sock, filename);
+
+    if (file_sent < 0)
     {
         printf("Failed to share file with %s\n", IP);
         close(sock);

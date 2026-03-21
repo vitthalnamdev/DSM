@@ -1,16 +1,15 @@
 #include "../../headers/clientsCommand.hpp"
 
-char *askStatus(int sock, const char *SERVER_IP)
+char *askStatus(const char *SERVER_IP)
 {
     const char *statuscommand = "status";
-    char *response = sendToServer(sock, statuscommand, SERVER_IP);
+    char *response = sendToServer(statuscommand, SELFIP);
     return response;
 }
 
-void handleStatus(int sock)
+void handleStatus()
 {
-
-    char *response = askStatus(sock, SELFIP);
+    char *response = askStatus(SELFIP);
     if (response)
     {
         printf("Server response: %s\n", response);

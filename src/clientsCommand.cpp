@@ -19,11 +19,10 @@ char **ip_list = NULL;
 char **ip_status = NULL;
 const char *SELFIP = "127.0.0.1";
 
-
-char *sendToServer(int sock, const char *command, const char *SERVER_IP)
+char *sendToServer(const char *command, const char *IP)
 {
-    connect_socket(sock, SERVER_IP);
-
+    int sock = create_socket();
+    connect_socket(sock, IP);
     send(sock, command, strlen(command), 0);
 
     int valread = read(sock, buffer, sizeof(buffer));
@@ -37,11 +36,13 @@ char *sendToServer(int sock, const char *command, const char *SERVER_IP)
             return NULL;
 
         memcpy(result, buffer, valread + 1); // copy only valid bytes
+        close(sock);
         return result;
     }
     else
     {
         char *err = (char *)STATUS_MESSAGES[CONNECTION_ERROR];
+        close(sock);
         return err;
     }
 }
@@ -99,15 +100,8 @@ void *commands(void *args)
             {
                 if (strcmp(command, client_dispatch_table[i].cmd_name) == 0)
                 {
-                    int sock = create_socket();
-                    if (sock < 0)
-                    {
-                        printf("Failed to create socket\n");
-                        break;
-                    }
-                    client_dispatch_table[i].handler(sock);
+                    client_dispatch_table[i].handler();
                     found = 1;
-                    close(sock);
                     break;
                 }
             }

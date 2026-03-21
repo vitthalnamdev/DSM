@@ -53,21 +53,20 @@ int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
     return true;
 }
 
-int send_file(int sock, const char *filename, const char *IP)
+int send_file(int sock, const char *filename)
 {
+
     if (sock < 0)
     {
         std::cerr << "Failed to create socket\n";
         return false;
     }
-    connect_socket(sock, IP);
 
     const char *command = "shareFile";
 
     if (!send_all_sync(sock, command, strlen(command)))
     {
         perror("Failed to send command");
-        close(sock);
         return -1;
     }
 
@@ -77,8 +76,6 @@ int send_file(int sock, const char *filename, const char *IP)
     if (strcmp(response, STATUS_MESSAGES[SUCCESS]) != 0)
     {
         printf("Server response: %s\n", response);
-        printf("Cannot share file with %s. Reason: %s\n", IP, response);
-        close(sock);
         return -1;
     }
 
@@ -87,7 +84,6 @@ int send_file(int sock, const char *filename, const char *IP)
     if (ret < 0)
     {
         std::cerr << "io_uring_queue_init failed: " << strerror(-ret) << "\n";
-        close(sock);
         return false;
     }
 

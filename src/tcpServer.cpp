@@ -1,5 +1,4 @@
 #include "../headers/connection.hpp"
-#include "../headers/clientsCommand.hpp"
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
 
@@ -20,6 +19,7 @@ void *server_listener_thread_tcp(void *args)
             continue;
         }
 
+        char buffer[256];
         // 2. Read the message sent by the client
         // recv() returns the number of bytes received
         ssize_t bytes_read = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
@@ -49,11 +49,6 @@ void *server_listener_thread_tcp(void *args)
                 send(new_socket, err, strlen(err), 0);
             }
         }
-
-        // pthread_mutex_unlock(&mesh_info.lock);
-
-        // 4. IMPORTANT: Close the socket ONLY after you are done responding
-
         close(new_socket);
     }
     return NULL;

@@ -1,6 +1,6 @@
 #include "../../headers/clientsCommand.hpp"
 
-void handle_connect_client(int sock)
+void handle_connect_client()
 {
 
     int INPUT_SIZE = 100;
@@ -14,7 +14,10 @@ void handle_connect_client(int sock)
     {
         ip_input[strcspn(ip_input, "\n")] = 0; // Remove the newline
     }
-
+    
+    int sock = create_socket();
+    
+    // connecting the sock with IP.
     if (connect_socket(sock, ip_input) < 0)
     {
         printf("Failed to connect to server at %s\n", ip_input);

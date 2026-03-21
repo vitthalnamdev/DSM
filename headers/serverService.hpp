@@ -7,12 +7,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-typedef void (*command_handler_t)(int);
+typedef void (*server_command_handler_t)(int);
 
 typedef struct
 {
     const char *cmd_name;
-    command_handler_t handler;
+    server_command_handler_t handler;
 } CommandMapServer;
 
 void handle_status_check(int sock);
@@ -24,6 +24,8 @@ void handle_share_file_server(int sock);
 extern int OPEN_RECEIVE_FILE_CONNECTION;
 
 void handle_receive_file_server(int sock);
+
+void handle_close_receive_file_server(int sock);
 
 extern CommandMapServer server_dispatch_table[];
 

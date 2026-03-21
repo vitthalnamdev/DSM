@@ -1,5 +1,4 @@
 #include "../headers/connection.hpp"
-#include "../headers/clientsCommand.hpp"
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
 
@@ -29,6 +28,7 @@ void *udp_discovery_responder(void *arg)
     while (1)
     {
         // 3. Wait for "status" message
+        char buffer[256];
         int n = recvfrom(sock, buffer, sizeof(buffer) - 1, 0, (struct sockaddr *)&cli_addr, &len);
         if (n > 0)
         {

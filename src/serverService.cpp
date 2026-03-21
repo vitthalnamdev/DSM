@@ -5,6 +5,7 @@ CommandMapServer server_dispatch_table[] = {
     {"connect", handle_connect_server},
     {"shareFile", handle_share_file_server},
     {"receiveFile", handle_receive_file_server}, 
+    {"closeReceiveFile" , handle_close_receive_file_server},
     {NULL, NULL} // Sentinel value to mark the end
 };
 

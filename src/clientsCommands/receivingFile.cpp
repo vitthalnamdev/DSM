@@ -37,7 +37,7 @@ void handle_sigint(int sig)
 
 /* ---------------- Main Logic ---------------- */
 
-void handle_receive_file(int sock)
+void handle_receive_file()
 {
     printf("Press Q to exit.\n");
 
@@ -45,9 +45,9 @@ void handle_receive_file(int sock)
     signal(SIGINT, handle_sigint);
     atexit(cleanup);
 
-    const char command[16] = "receiveFile";
+    char command[30] = "receiveFile";
 
-    char *result = sendToServer(sock, command, SELFIP);
+    char *result = sendToServer(command, SELFIP);
 
     if (strcmp(result, STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]) == 0)
     {
@@ -77,31 +77,20 @@ void handle_receive_file(int sock)
                 {
                     if (ch == 'Q' || ch == 'q')
                     {
-                        printf("\nExiting...\n");
-
-                        // TODO: notify server to stop sending file
-                        // send(sock, "STOP", 4, 0);
-
+                        strcpy(command, "closeReceiveFile");
+                        result = sendToServer(command, SELFIP);
+                        if (strcmp(result, STATUS_MESSAGES[SUCCESS]) == 0)
+                        {
+                            printf("\nExiting...\n");
+                        }
+                        else
+                        {
+                            exit(-1);
+                        }
                         break;
                     }
                 }
             }
-
-            /* ---------------- File Receive Logic ---------------- */
-            // Example placeholder:
-            // char buffer[4096];
-            // int bytes = recv(sock, buffer, sizeof(buffer), 0);
-            // if (bytes > 0) {
-            //     write(file_fd, buffer, bytes);
-            // }
-            // else if (bytes == 0) {
-            //     printf("\nFile transfer complete.\n");
-            //     break;
-            // }
-            // else {
-            //     perror("recv");
-            //     break;
-            // }
         }
 
         disable_raw_mode(); // restore terminal on normal exit

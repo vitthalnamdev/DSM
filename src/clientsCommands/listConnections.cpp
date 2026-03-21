@@ -106,7 +106,7 @@ void sendRequest()
     }
 }
 
-void handle_list_connections(int unusedSock)
+void handle_list_connections()
 {
     sendRequest();
 

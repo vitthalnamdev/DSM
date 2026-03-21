@@ -1,6 +1,6 @@
 #include "../../headers/clientsCommand.hpp"
 
-void handle_exit(int sock)
+void handle_exit()
 {
     exit(0);
 }
