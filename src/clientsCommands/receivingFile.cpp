@@ -1,49 +1,9 @@
 #include "../../headers/clientsCommand.hpp"
 #include "../../headers/Status_codes.hpp"
 
-struct termios orig_termios;
-
-/* ---------------- Terminal Handling ---------------- */
-
-void disable_raw_mode()
-{
-    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
-}
-
-void enable_raw_mode()
-{
-    tcgetattr(STDIN_FILENO, &orig_termios);
-
-    struct termios raw = orig_termios;
-    raw.c_lflag &= ~(ICANON | ECHO);
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
-}
-
-/* ---------------- Cleanup Handlers ---------------- */
-
-void cleanup()
-{
-    disable_raw_mode();
-}
-
-void handle_sigint(int sig)
-{
-    (void)sig;
-    disable_raw_mode();
-    printf("\nTerminal restored. Exiting...\n");
-    exit(0);
-}
-
-/* ---------------- Main Logic ---------------- */
-
 void handle_receive_file()
 {
     printf("Press Q to exit.\n");
-
-    // Register cleanup mechanisms
-    signal(SIGINT, handle_sigint);
-    atexit(cleanup);
 
     char command[30] = "receiveFile";
 
@@ -52,8 +12,6 @@ void handle_receive_file()
     if (strcmp(result, STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]) == 0)
     {
         printf("Waiting to receive file from server...\n");
-
-        enable_raw_mode();
 
         while (1)
         {
@@ -92,8 +50,6 @@ void handle_receive_file()
                 }
             }
         }
-
-        disable_raw_mode(); // restore terminal on normal exit
     }
     else
     {
