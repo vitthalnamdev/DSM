@@ -2,6 +2,9 @@
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
 
+
+char client_ip[INET_ADDRSTRLEN] = {0};
+
 void *server_listener_thread_tcp(void *args)
 {
     struct server_args *s_args = (struct server_args *)args;
@@ -18,6 +21,9 @@ void *server_listener_thread_tcp(void *args)
             perror("accept failed");
             continue;
         }
+
+        // Convert IP to human-readable form
+        inet_ntop(AF_INET, &address.sin_addr, client_ip, INET_ADDRSTRLEN);
 
         char buffer[256];
         // 2. Read the message sent by the client

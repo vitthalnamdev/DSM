@@ -15,6 +15,16 @@ typedef struct
     server_command_handler_t handler;
 } CommandMapServer;
 
+struct server_args
+{
+    int server_fd;
+};
+
+void *server_listener_thread_tcp(void *args);
+void *udp_discovery_responder(void *args);
+
+extern char client_ip[INET_ADDRSTRLEN];
+
 void handle_status_check(int sock);
 
 void handle_connect_server(int sock);

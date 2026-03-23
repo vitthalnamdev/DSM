@@ -10,4 +10,5 @@ const char *STATUS_MESSAGES[] = {
     "Unknown error",
     "Connection error",
     "Receiver IP don't have an open connection for receiving file",
+    "Reciever Reject the connection request"
 };

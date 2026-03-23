@@ -5,7 +5,6 @@
 void handle_send_file()
 {
 
-    // TODO: [Implementation] If, only for sending file , or this function is called, Then I have to show through UI (the percentage of file sent) , and also the file name that is being sent, and the I.P to which it is being sent.
     printf("Enter the I.P that you want to share the file with: ");
     char IP[16];
     if (!fgets(IP, sizeof(IP), stdin))
@@ -30,31 +29,14 @@ void handle_send_file()
 
     printf("Sharing file %s with %s...\n", filename, IP);
 
-    // creating and connecting socket.
-    int sock = create_socket();
-    connect_socket(sock, IP);
+   
 
-    int file_sent = send_file(sock, filename);
+    int file_sent = send_file(filename , IP);
 
-    if (file_sent < 0)
-    {
-        printf("Failed to share file with %s\n", IP);
-        close(sock);
-        return;
+    if(file_sent > 0){
+        printf("File has been send successfully");
     }
-    char response[128];
-    int valread = read(sock, response, sizeof(response) - 1);
-
-    if (valread > 0)
-    {
-        response[valread] = '\0';
-        printf("Server response: %s\n", response);
-        printf("File shared successfully with %s\n", IP);
+    else{
+        printf("There is an error in sending file");
     }
-    else
-    {
-        printf("Failed to share file with %s\n", IP);
-    }
-
-    close(sock);
 }

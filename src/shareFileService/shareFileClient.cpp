@@ -53,13 +53,17 @@ int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
     return true;
 }
 
-int send_file(int sock, const char *filename)
+int send_file(const char *filename, const char *IP)
 {
+
+    // creating and connecting socket.
+    int sock = create_socket();
+    connect_socket(sock, IP);
 
     if (sock < 0)
     {
         std::cerr << "Failed to create socket\n";
-        return false;
+        return -1;
     }
 
     const char *command = "shareFile";
@@ -84,14 +88,14 @@ int send_file(int sock, const char *filename)
     if (ret < 0)
     {
         std::cerr << "io_uring_queue_init failed: " << strerror(-ret) << "\n";
-        return false;
+        return -1;
     }
 
     int file = open(filename, O_RDONLY);
     if (file < 0)
     {
         perror("open");
-        return false;
+        return -1;
     }
 
     struct stat st{};
@@ -99,7 +103,7 @@ int send_file(int sock, const char *filename)
     {
         perror("fstat");
         close(file);
-        return false;
+        return -1;
     }
 
     uint64_t filesize = st.st_size;
@@ -111,7 +115,7 @@ int send_file(int sock, const char *filename)
     {
         std::cerr << "Failed to send file metadata\n";
         close(file);
-        return false;
+        return -1;
     }
 
     TransferStats stats;
@@ -127,7 +131,7 @@ int send_file(int sock, const char *filename)
         {
             perror("read");
             close(file);
-            return false;
+            return -1;
         }
         if (bytes == 0)
             break;
@@ -136,7 +140,7 @@ int send_file(int sock, const char *filename)
         {
             std::cerr << "Failed to send file data\n";
             close(file);
-            return false;
+            return -1;
         }
 
         stats.update(bytes);
@@ -144,7 +148,8 @@ int send_file(int sock, const char *filename)
     }
 
     close(file);
+    close(sock);
     ui.done();
     io_uring_queue_exit(&ring);
-    return true;
+    return 1;
 }

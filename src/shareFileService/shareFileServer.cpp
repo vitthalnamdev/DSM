@@ -160,16 +160,51 @@ void receive_file(int sock)
     OPEN_RECEIVE_FILE_CONNECTION = 0; // Reset the flag after handling the file transfer
 }
 
-// Handle shareFile command
+bool checkChar(char choice)
+{
+    return (choice == 'a' || choice == 'A' || choice == 'r' || choice == 'R');
+}
+
 void handle_share_file_server(int sock)
 {
-
     if (OPEN_RECEIVE_FILE_CONNECTION == 0)
     {
-        send(sock, STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION], strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
+        send(sock, STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION],
+             strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
         return;
     }
 
-    send(sock, STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]), 0);
-    receive_file(sock);
+    std::string input;
+    char choice = '\0';
+
+    while (true)
+    {
+        std::cout << client_ip
+                  << " wants to send you a file. (A/R): ";
+
+        std::getline(std::cin, input);
+
+        if (input.empty())
+            continue;
+
+        choice = input[0];
+
+        if (checkChar(choice))
+            break;
+
+        std::cout << "Invalid input. Please enter A or R.\n";
+    }
+
+    if (choice == 'a' || choice == 'A')
+    {
+        send(sock, STATUS_MESSAGES[SUCCESS],
+             strlen(STATUS_MESSAGES[SUCCESS]), 0);
+
+        receive_file(sock);
+    }
+    else
+    {
+        send(sock, STATUS_MESSAGES[REJECT_CONNECTION],
+             strlen(STATUS_MESSAGES[REJECT_CONNECTION]), 0);
+    }
 }
