@@ -35,7 +35,9 @@ void handle_send_file()
 
     printf("Sharing file %s with %s...\n", filename, IP);
 
-    int file_sent = send_file(filename, IP);
+    const char*folder = "files";
+
+    int file_sent = send_file(filename, IP , folder);
 
     if (file_sent > 0)
         printf("File has been sent successfully\n");

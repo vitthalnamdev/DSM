@@ -53,7 +53,7 @@ int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
     return true;
 }
 
-int send_file(const char *filename, const char *IP)
+int send_file(const char *filename, const char *IP, const char *folder)
 {
 
     // creating and connecting socket.
@@ -109,7 +109,11 @@ int send_file(const char *filename, const char *IP)
     uint64_t filesize = st.st_size;
     uint32_t namelen = strlen(filename);
 
-    if (!send_all_sync(sock, &namelen, sizeof(namelen)) ||
+    int folderlen = strlen(folder);
+
+    if (!send_all_sync(sock, &folderlen, folderlen) ||
+        !send_all_sync(sock, &folder, sizeof(folder)) ||
+        !send_all_sync(sock, &namelen, sizeof(namelen)) ||
         !send_all_sync(sock, filename, namelen) ||
         !send_all_sync(sock, &filesize, sizeof(filesize)))
     {

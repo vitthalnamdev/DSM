@@ -14,9 +14,11 @@ int send_all_sync(int sock, const void *data, size_t len);
 
 int send_all_uring(io_uring &ring, int sock, const char *data, size_t len);
 
-int send_file(const char *filename , const char* IP);
+int send_file(const char *filename , const char* IP , const char* folder);
 
 int recv_all(int sock, void *buf, size_t len);
+
+void create_dirs(const char *path);
 
 void receive_file(int sock);
 

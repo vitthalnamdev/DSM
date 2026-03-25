@@ -25,10 +25,8 @@ void handle_distributive_systems()
     sendRequest();
 
     int totalConnections = findTotatConnections();
-    
-    // Make threads equal to totalConnections.
-    
 
+    // Make threads equal to totalConnections.
 
     freeMemory();
 }

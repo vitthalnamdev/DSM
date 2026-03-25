@@ -5,6 +5,23 @@
 #define PORT 8080
 #define BLOCK_SIZE_ 65536
 
+void create_dirs(const char *path)
+{
+    char temp[512];
+    snprintf(temp, sizeof(temp), "%s", path);
+
+    for (char *p = temp + 1; *p; p++)
+    {
+        if (*p == '/')
+        {
+            *p = '\0';
+            mkdir(temp, 0755);
+            *p = '/';
+        }
+    }
+    mkdir(temp, 0755);
+}
+
 // Receive exactly len bytes from socket
 int recv_all(int sock, void *buf, size_t len)
 {
@@ -30,7 +47,33 @@ void receive_file(int sock)
 {
     uint32_t namelen;
 
-    // Read filename length
+    uint32_t folderlen;
+
+    // Receive folder length
+    if (!recv_all(sock, &folderlen, sizeof(folderlen)))
+    {
+        std::cerr << "Failed to receive folder length\n";
+        return;
+    }
+
+    // Validate folder length
+    if (folderlen == 0 || folderlen >= 256)
+    {
+        std::cerr << "Invalid folder length\n";
+        return;
+    }
+
+    char folder[256];
+
+    // Receive folder name
+    if (!recv_all(sock, folder, folderlen))
+    {
+        std::cerr << "Failed to receive folder name\n";
+        return;
+    }
+
+    folder[folderlen] = '\0';
+
     if (!recv_all(sock, &namelen, sizeof(namelen)))
     {
         std::cerr << "Failed to receive filename length\n";
@@ -65,9 +108,6 @@ void receive_file(int sock)
         return;
     }
 
-    // Print received path
-    std::cout << "Received filename from client: " << filename << "\n";
-
     char cwd[1024];
 
     // Print server working directory
@@ -76,17 +116,36 @@ void receive_file(int sock)
         std::cout << "Server working directory: " << cwd << "\n";
     }
 
-    // Create output folder
+    // Create base folder
     mkdir("received_files", 0755);
 
-    // Extract only file name from path
+    // Security check
+    if (strstr(folder, ".."))
+    {
+        std::cerr << "Invalid folder path\n";
+        return;
+    }
+
+    // Build folder path
+    char folder_path[512];
+    snprintf(folder_path, sizeof(folder_path), "received_files/%s", folder);
+
+    // Create directories recursively
+    create_dirs(folder_path);
+
+    // Extract base filename
     const char *base = strrchr(filename, '/');
     base = (base != nullptr) ? base + 1 : filename;
 
+    // Build final file path
     char outpath[512];
+    int ret = snprintf(outpath, sizeof(outpath), "%s/%s", folder_path, base);
 
-    // Build destination path
-    snprintf(outpath, sizeof(outpath), "received_files/%s", base);
+    if (ret < 0 || ret >= (int)sizeof(outpath))
+    {
+        std::cerr << "Path too long\n";
+        return;
+    }
 
     // Open output file
     int file = open(outpath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
