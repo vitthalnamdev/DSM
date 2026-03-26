@@ -53,7 +53,7 @@ int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
     return true;
 }
 
-int send_file(const char *filename, const char *IP, const char *folder)
+int send_file(const char *filename, const char *IP, const char *folder, const bool iscmdSendFile)
 {
 
     int file = open(filename, O_RDONLY);
@@ -89,7 +89,16 @@ int send_file(const char *filename, const char *IP, const char *folder)
         return -1;
     }
 
-    printf("\t\tWait till the receiver accept the connection request............\n");
+    if (iscmdSendFile)
+    {
+        printf("\t\tWait till the receiver accept the connection request............\n");
+    }
+
+    if (!send_all_sync(sock, &iscmdSendFile, sizeof(iscmdSendFile)))
+    {
+        perror("Failed to send..");
+        return -1;
+    }
 
     char response[128];
     int valread = read(sock, response, sizeof(response) - 1);
@@ -127,7 +136,8 @@ int send_file(const char *filename, const char *IP, const char *folder)
     TransferStats stats;
     ProgressUI ui;
 
-    stats.start(filesize);
+    if (iscmdSendFile)
+        stats.start(filesize);
 
     char buffer[BLOCK_SIZE_];
     while (true)
@@ -149,13 +159,19 @@ int send_file(const char *filename, const char *IP, const char *folder)
             return -1;
         }
 
-        stats.update(bytes);
-        ui.render(stats);
+        if (iscmdSendFile)
+        {
+            stats.update(bytes);
+            ui.render(stats);
+        }
     }
 
     close(file);
     close(sock);
-    ui.done();
+    if (iscmdSendFile)
+    {
+        ui.done();
+    }
     io_uring_queue_exit(&ring);
     return 1;
 }

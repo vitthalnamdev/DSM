@@ -37,6 +37,13 @@ extern char **ip_status; // Global variable to store the list of IPs that respon
 
 extern CommandMapClient client_dispatch_table[];
 
+struct distributiveComputingargs
+{
+    char *codePath;
+    char *trainFilePath;
+    char *IP;
+};
+
 char *sendToServer(const char *command, const char *IP);
 
 int create_socket(void);

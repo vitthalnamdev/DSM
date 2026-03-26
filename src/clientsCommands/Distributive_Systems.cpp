@@ -22,7 +22,12 @@ void freeMemory()
 
 void *distributiveComputing(void *args)
 {
-
+    struct distributiveComputingargs *dis_args = (struct distributiveComputingargs *)args;
+    int res = send_file(dis_args->codePath, dis_args->IP, "Code", 0);
+    if (res > 0)
+    {
+        printf("Success");
+    }
     return NULL;
 }
 
@@ -68,7 +73,13 @@ void handle_distributive_systems()
 
     for (int i = 0; i < totalConnections; i++)
     {
-        if (pthread_create(&threads[i], NULL, distributiveComputing, NULL) != 0)
+        struct distributiveComputingargs dis_args;
+
+        dis_args.codePath = codepath;
+        dis_args.trainFilePath = trainfilepath;
+        dis_args.IP = ip_list[i];
+
+        if (pthread_create(&threads[i], NULL, distributiveComputing, &dis_args) != 0)
         {
             perror("Failed to create distributive computing thread");
             return;

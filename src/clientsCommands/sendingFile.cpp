@@ -2,15 +2,13 @@
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
 
-
 void handle_send_file()
 {
     char IP[16];
     char filename[256];
-    
-    
+
     printf("Enter the I.P that you want to share the file with: ");
-    
+
     if (!fgets(IP, sizeof(IP), stdin))
     {
         perror("Failed to read IP address");
@@ -30,9 +28,11 @@ void handle_send_file()
 
     printf("Sharing file %s with %s...\n", filename, IP);
 
-    const char*folder = "files";
+    const char *folder = "files";
 
-    int file_sent = send_file(filename, IP , folder);
+    const bool iscmdSendFile = true;
+
+    int file_sent = send_file(filename, IP, folder, iscmdSendFile);
 
     if (file_sent > 0)
         printf("File has been sent successfully\n");

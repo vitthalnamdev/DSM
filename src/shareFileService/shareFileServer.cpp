@@ -236,6 +236,23 @@ void handle_share_file_server(int sock)
     std::string input;
     char choice = '\0';
 
+    uint64_t askUser;
+
+    // Read file size
+    if (!recv_all(sock, &askUser, sizeof(askUser)))
+    {
+        std::cerr << "Failed to receive data from the client\n";
+        return;
+    }
+
+    if (!askUser)
+    {
+        send(sock, STATUS_MESSAGES[SUCCESS],
+             strlen(STATUS_MESSAGES[SUCCESS]), 0);
+        receive_file(sock);
+        return;
+    }
+
     while (true)
     {
         std::cout << client_ip
