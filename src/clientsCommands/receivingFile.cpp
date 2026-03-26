@@ -43,6 +43,7 @@ void handle_receive_file()
                         }
                         else
                         {
+                            clear_stdin();
                             exit(-1);
                         }
                         break;
@@ -55,6 +56,8 @@ void handle_receive_file()
     {
         printf("Failed to receive file: %s\n", result);
     }
+
+    clear_stdin();
 
     free(result);
 }

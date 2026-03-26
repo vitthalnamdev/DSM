@@ -15,8 +15,7 @@ CommandMapClient client_dispatch_table[] = {
     {"sendFile", handle_send_file},
     {"receiveFile", handle_receive_file},
     {"runDistributiveSystems", handle_distributive_systems},
-    {NULL, NULL}
-};
+    {NULL, NULL}};
 
 char buffer[BUFFER_SIZE] = {0};
 char command[BUFFER_SIZE] = {0};
@@ -25,13 +24,20 @@ char **ip_list = NULL;
 char **ip_status = NULL;
 const char *SELFIP = "127.0.0.1";
 
+void clear_stdin()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}
 
 // ================= SOCKET FUNCTIONS =================
 
 char *sendToServer(const char *command, const char *IP)
 {
     int sock = create_socket();
-    if (sock < 0) return NULL;
+    if (sock < 0)
+        return NULL;
 
     if (connect_socket(sock, IP) < 0)
     {
@@ -99,7 +105,6 @@ int connect_socket(int sock, const char *ip)
     return 0;
 }
 
-
 // ================= HELPER =================
 
 void to_lowercase(char *str)
@@ -107,7 +112,6 @@ void to_lowercase(char *str)
     for (int i = 0; str[i]; i++)
         str[i] = tolower(str[i]);
 }
-
 
 // ================= LEVENSHTEIN =================
 
@@ -119,8 +123,10 @@ int levenshtein(const char *s1, const char *s2)
     for (int i = 0; i <= len1; i++)
         dp[i] = (int *)malloc((len2 + 1) * sizeof(int));
 
-    for (int i = 0; i <= len1; i++) dp[i][0] = i;
-    for (int j = 0; j <= len2; j++) dp[0][j] = j;
+    for (int i = 0; i <= len1; i++)
+        dp[i][0] = i;
+    for (int j = 0; j <= len2; j++)
+        dp[0][j] = j;
 
     for (int i = 1; i <= len1; i++)
     {
@@ -145,10 +151,9 @@ int levenshtein(const char *s1, const char *s2)
     return result;
 }
 
-
 // ================= FIND CLOSEST COMMAND =================
 
-const char* find_closest_command(const char *input)
+const char *find_closest_command(const char *input)
 {
     char input_copy[BUFFER_SIZE];
     strcpy(input_copy, input);
@@ -194,7 +199,6 @@ const char* find_closest_command(const char *input)
 
     return NULL;
 }
-
 
 // ================= COMMAND LOOP =================
 
@@ -247,7 +251,7 @@ void *commands(void *args)
                             }
                         }
                     }
-                    
+
                     else if (choice == 'n')
                     {
                         printf("Aborted\n");

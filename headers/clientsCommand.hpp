@@ -47,6 +47,8 @@ void handle_exit();
 
 void handle_connect_client();
 
+void clear_stdin();
+
 void handleStatus();
 
 void handle_list_connections();

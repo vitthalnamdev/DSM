@@ -2,11 +2,6 @@
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
 
-void clear_stdin()
-{
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
 
 void handle_send_file()
 {
