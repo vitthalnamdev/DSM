@@ -43,7 +43,7 @@ int recv_all(int sock, void *buf, size_t len)
 }
 
 // Receive file metadata and file data
-void receive_file(int sock)
+void receive_file(int sock, u_int8_t askclientShareFile)
 {
     uint32_t namelen;
 
@@ -111,7 +111,7 @@ void receive_file(int sock)
     char cwd[1024];
 
     // Print server working directory
-    if (getcwd(cwd, sizeof(cwd)))
+    if (getcwd(cwd, sizeof(cwd)) && askclientShareFile)
     {
         std::cout << "Server working directory: " << cwd << "\n";
     }
@@ -162,7 +162,10 @@ void receive_file(int sock)
     TransferStats stats;
     ProgressUI ui;
 
-    stats.start(filesize);
+    if (askclientShareFile)
+    {
+        stats.start(filesize);
+    }
 
     // Receive file content
     while (received < filesize)
@@ -191,11 +194,17 @@ void receive_file(int sock)
         }
 
         received += bytes;
-        stats.update(bytes);
-        ui.render(stats);
+        if (askclientShareFile)
+        {
+            stats.update(bytes);
+            ui.render(stats);
+        }
     }
 
-    ui.done();
+    if (askclientShareFile)
+    {
+        ui.done();
+    }
 
     // Close file after writing
     close(file);
@@ -203,8 +212,11 @@ void receive_file(int sock)
     // Confirm full file received
     if (received == filesize)
     {
-        std::cout << "File received successfully: " << outpath
-                  << " (" << filesize << " bytes)\n";
+        if (askclientShareFile)
+        {
+            std::cout << "File received successfully: " << outpath
+                      << " (" << filesize << " bytes)\n";
+        }
 
         const char *msg = "SUCCESS";
 
@@ -232,27 +244,27 @@ void handle_share_file_server(int sock)
              strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
         return;
     }
+    else
+    {
+        send(sock, STATUS_MESSAGES[SUCCESS],
+             strlen(STATUS_MESSAGES[SUCCESS]), 0);
+    }
 
-    std::string input;
-    char choice = '\0';
-
-    uint64_t askUser;
-
-    // Read file size
-    if (!recv_all(sock, &askUser, sizeof(askUser)))
+    uint8_t askClientShareFile;
+    if (!recv_all(sock, &askClientShareFile, sizeof(askClientShareFile)))
     {
         std::cerr << "Failed to receive data from the client\n";
         return;
     }
 
-    if (!askUser)
+    if (!askClientShareFile)
     {
-        send(sock, STATUS_MESSAGES[SUCCESS],
-             strlen(STATUS_MESSAGES[SUCCESS]), 0);
-        receive_file(sock);
+        receive_file(sock, askClientShareFile);
         return;
     }
 
+    std::string input;
+    char choice = '\0';
     while (true)
     {
         std::cout << client_ip
@@ -276,7 +288,7 @@ void handle_share_file_server(int sock)
         send(sock, STATUS_MESSAGES[SUCCESS],
              strlen(STATUS_MESSAGES[SUCCESS]), 0);
 
-        receive_file(sock);
+        receive_file(sock, askClientShareFile);
     }
     else
     {

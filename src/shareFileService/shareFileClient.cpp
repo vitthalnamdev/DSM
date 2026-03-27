@@ -91,13 +91,7 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
 
     if (iscmdSendFile)
     {
-        printf("\t\tWait till the receiver accept the connection request............\n");
-    }
-
-    if (!send_all_sync(sock, &iscmdSendFile, sizeof(iscmdSendFile)))
-    {
-        perror("Failed to send..");
-        return -1;
+        printf("\n\n\t\tWait till the receiver accept the connection request............\n\n\n");
     }
 
     char response[128];
@@ -106,6 +100,12 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     if (strcmp(response, STATUS_MESSAGES[SUCCESS]) != 0)
     {
         printf("Server response: %s\n", response);
+        return -1;
+    }
+
+    if (!send_all_sync(sock, &iscmdSendFile, sizeof(iscmdSendFile)))
+    {
+        perror("Failed to send");
         return -1;
     }
 

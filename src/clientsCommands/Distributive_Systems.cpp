@@ -23,11 +23,8 @@ void freeMemory()
 void *distributiveComputing(void *args)
 {
     struct distributiveComputingargs *dis_args = (struct distributiveComputingargs *)args;
-    int res = send_file(dis_args->codePath, dis_args->IP, "Code", 0);
-    if (res > 0)
-    {
-        printf("Success");
-    }
+    int res = send_file(dis_args->codePath, dis_args->IP, "Code", false);
+     
     return NULL;
 }
 
@@ -45,7 +42,7 @@ void handle_distributive_systems()
         char *responce = sendToServer(command, ip_list[i]);
     }
 
-    printf("Enter the code file path:");
+    printf("Enter the code file path: ");
     char codepath[128];
     if (!fgets(codepath, sizeof(codepath), stdin))
     {
@@ -54,18 +51,15 @@ void handle_distributive_systems()
     }
     codepath[strcspn(codepath, "\n")] = 0;
 
-    clear_stdin();
-
     char trainfilepath[128];
 
+    printf("Enter the train file path: ");
     if (!fgets(trainfilepath, sizeof(trainfilepath), stdin))
     {
         perror("Failed to read trainfilepath");
         return;
     }
     trainfilepath[strcspn(trainfilepath, "\n")] = 0;
-
-    clear_stdin();
 
     // Make threads equal to totalConnections.
 
@@ -76,9 +70,10 @@ void handle_distributive_systems()
         struct distributiveComputingargs dis_args;
 
         dis_args.codePath = codepath;
+        // Also, implement the logic to give each i.p its respective train data before assigning 
         dis_args.trainFilePath = trainfilepath;
         dis_args.IP = ip_list[i];
-
+        
         if (pthread_create(&threads[i], NULL, distributiveComputing, &dis_args) != 0)
         {
             perror("Failed to create distributive computing thread");

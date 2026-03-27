@@ -27,8 +27,7 @@ const char *SELFIP = "127.0.0.1";
 void clear_stdin()
 {
     int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-        ;
+    while ((c = getchar()) != '\n' && c != EOF);
 }
 
 // ================= SOCKET FUNCTIONS =================
