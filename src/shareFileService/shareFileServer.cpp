@@ -236,13 +236,15 @@ bool checkChar(char choice)
     return (choice == 'a' || choice == 'A' || choice == 'r' || choice == 'R');
 }
 
-void handle_share_file_server(int sock)
+void *handle_share_file_server(void *arg)
 {
+    int sock = *(int *)arg;
     if (OPEN_RECEIVE_FILE_CONNECTION == 0)
     {
         send(sock, STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION],
              strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
-        return;
+        close(sock);
+        return NULL;
     }
     else
     {
@@ -254,13 +256,15 @@ void handle_share_file_server(int sock)
     if (!recv_all(sock, &askClientShareFile, sizeof(askClientShareFile)))
     {
         std::cerr << "Failed to receive data from the client\n";
-        return;
+        close(sock);
+        return NULL;
     }
 
     if (!askClientShareFile)
     {
         receive_file(sock, askClientShareFile);
-        return;
+        close(sock);
+        return NULL;
     }
 
     std::string input;
@@ -295,4 +299,6 @@ void handle_share_file_server(int sock)
         send(sock, STATUS_MESSAGES[REJECT_CONNECTION],
              strlen(STATUS_MESSAGES[REJECT_CONNECTION]), 0);
     }
+    close(sock);
+    return NULL;
 }

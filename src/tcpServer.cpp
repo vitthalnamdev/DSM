@@ -2,7 +2,6 @@
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
 
-
 char client_ip[INET_ADDRSTRLEN] = {0};
 
 void *server_listener_thread_tcp(void *args)
@@ -42,8 +41,22 @@ void *server_listener_thread_tcp(void *args)
             {
                 if (strcmp(buffer, server_dispatch_table[i].cmd_name) == 0)
                 {
-                    server_dispatch_table[i].handler(new_socket);
-                    // wait(); // Wait for the command thread to signal that it's done processing
+                    pthread_t tid;
+
+                    int *sock_ptr = (int *)malloc(sizeof(int));
+                    *sock_ptr = new_socket;
+
+                    if (pthread_create(&tid, NULL, server_dispatch_table[i].handler, sock_ptr) != 0)
+                    {
+                        perror("pthread_create failed");
+                        free(sock_ptr);
+                        close(new_socket);
+                    }
+                    else
+                    {
+                        pthread_detach(tid);
+                    }
+
                     found = 1;
                     break;
                 }
@@ -55,7 +68,6 @@ void *server_listener_thread_tcp(void *args)
                 send(new_socket, err, strlen(err), 0);
             }
         }
-        close(new_socket);
     }
     return NULL;
 }

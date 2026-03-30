@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-typedef void (*server_command_handler_t)(int);
+typedef void *(*server_command_handler_t)(void *);
 
 typedef struct
 {
@@ -25,17 +25,17 @@ void *udp_discovery_responder(void *args);
 
 extern char client_ip[INET_ADDRSTRLEN];
 
-void handle_status_check(int sock);
+void *handle_status_check(void *arg);
 
-void handle_connect_server(int sock);
+void *handle_connect_server(void *arg);
 
-void handle_share_file_server(int sock);
+void *handle_share_file_server(void *arg);
 
 extern int OPEN_RECEIVE_FILE_CONNECTION;
 
-void handle_receive_file_server(int sock);
+void *handle_receive_file_server(void *arg);
 
-void handle_close_receive_file_server(int sock);
+void *handle_close_receive_file_server(void *arg);
 
 extern CommandMapServer server_dispatch_table[];
 

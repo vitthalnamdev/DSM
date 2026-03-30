@@ -27,7 +27,8 @@ const char *SELFIP = "127.0.0.1";
 void clear_stdin()
 {
     int c;
-    while ((c = getchar()) != '\n' && c != EOF);
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
 }
 
 // ================= SOCKET FUNCTIONS =================
@@ -158,7 +159,7 @@ const char *find_closest_command(const char *input)
     strcpy(input_copy, input);
     to_lowercase(input_copy);
 
-    // 🔥 1. SUBSTRING MATCH (PRIORITY)
+    //  1. SUBSTRING MATCH (PRIORITY)
     for (int i = 0; client_dispatch_table[i].cmd_name != NULL; i++)
     {
         char cmd_copy[BUFFER_SIZE];
@@ -171,7 +172,7 @@ const char *find_closest_command(const char *input)
         }
     }
 
-    // 🔥 2. LEVENSHTEIN MATCH
+    // 2. LEVENSHTEIN MATCH
     int min_dist = 1000;
     const char *best_match = NULL;
 
@@ -216,7 +217,7 @@ void *commands(void *args)
 
             int found = 0;
 
-            // ✅ CASE-INSENSITIVE MATCH
+            //  CASE-INSENSITIVE MATCH
             for (int i = 0; client_dispatch_table[i].cmd_name != NULL; i++)
             {
                 if (strcasecmp(command, client_dispatch_table[i].cmd_name) == 0)
