@@ -1,5 +1,6 @@
 #include "../../headers/clientsCommand.hpp"
 #include "../../headers/shareFile.hpp"
+#include "../../headers/Status_codes.hpp"
 
 int findTotatConnections()
 {
@@ -23,8 +24,18 @@ void freeMemory()
 void *distributiveComputing(void *args)
 {
     struct distributiveComputingargs *dis_args = (struct distributiveComputingargs *)args;
-    int res = send_file(dis_args->codePath, dis_args->IP, "Code", false);
-     
+    char *command = "distributiveComputing";
+    char *res = sendToServer(command, dis_args->IP);
+    if (res == STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION])
+    {
+        
+    }
+    else
+    {
+        printf("Failed to open connection for distributive computing on IP: %s\n", dis_args->IP);
+        return NULL;
+    }
+
     return NULL;
 }
 
@@ -34,13 +45,6 @@ void handle_distributive_systems()
     sendRequest();
 
     int totalConnections = findTotatConnections();
-
-    // Opening the reciever's endpoint for the IP's connected to the network..
-    const char *command = "receiveFile";
-    for (int i = 0; ip_list[i] != NULL; i++)
-    {
-        char *responce = sendToServer(command, ip_list[i]);
-    }
 
     printf("Enter the code file path: ");
     char codepath[128];
@@ -67,14 +71,15 @@ void handle_distributive_systems()
 
     for (int i = 0; i < totalConnections; i++)
     {
-        struct distributiveComputingargs dis_args;
+        struct distributiveComputingargs *dis_args =
+            (struct distributiveComputingargs *)malloc(sizeof(struct distributiveComputingargs));
 
-        dis_args.codePath = codepath;
-        // Also, implement the logic to give each i.p its respective train data before assigning 
-        dis_args.trainFilePath = trainfilepath;
-        dis_args.IP = ip_list[i];
-        
-        if (pthread_create(&threads[i], NULL, distributiveComputing, &dis_args) != 0)
+        dis_args->codePath = codepath;
+        // Also, implement the logic to give each i.p its respective train data before assigning
+        dis_args->trainFilePath = trainfilepath;
+        dis_args->IP = ip_list[i];
+
+        if (pthread_create(&threads[i], NULL, distributiveComputing, dis_args) != 0)
         {
             perror("Failed to create distributive computing thread");
             return;

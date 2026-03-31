@@ -37,6 +37,8 @@ void *handle_receive_file_server(void *arg);
 
 void *handle_close_receive_file_server(void *arg);
 
+void *handle_distributive_systems(void *arg);
+
 extern CommandMapServer server_dispatch_table[];
 
 #endif
