@@ -21,14 +21,13 @@ void freeMemory()
     free(ip_status);
 }
 
-void *distributiveComputing(void *args)
+void *distributiveComputingOverNetwork(void *args)
 {
     struct distributiveComputingargs *dis_args = (struct distributiveComputingargs *)args;
-    char *command = "distributiveComputing";
+    const char *command = "distributiveComputing";
     char *res = sendToServer(command, dis_args->IP);
-    if (res == STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION])
+    if (strcmp(res, STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]) == 0)
     {
-        
     }
     else
     {
@@ -36,6 +35,11 @@ void *distributiveComputing(void *args)
         return NULL;
     }
 
+    return NULL;
+}
+
+void *distributiveComputingLocal(void *args)
+{
     return NULL;
 }
 
@@ -79,7 +83,7 @@ void handle_distributive_systems()
         dis_args->trainFilePath = trainfilepath;
         dis_args->IP = ip_list[i];
 
-        if (pthread_create(&threads[i], NULL, distributiveComputing, dis_args) != 0)
+        if (pthread_create(&threads[i], NULL, distributiveComputingOverNetwork, dis_args) != 0)
         {
             perror("Failed to create distributive computing thread");
             return;

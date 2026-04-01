@@ -1,6 +1,7 @@
 #include "../headers/connection.hpp"
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
+#include "../headers/clientsCommand.hpp"
 
 void *udp_discovery_responder(void *arg)
 {
@@ -22,6 +23,8 @@ void *udp_discovery_responder(void *arg)
         perror("UDP Bind failed");
         return NULL;
     }
+
+    myIp = inet_ntoa(serv_addr.sin_addr);
 
     // It's only active to respond to the status request from the scanner, so we can keep it in an infinite loop
 

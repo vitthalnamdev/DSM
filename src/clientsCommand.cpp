@@ -22,6 +22,7 @@ char command[BUFFER_SIZE] = {0};
 
 char **ip_list = NULL;
 char **ip_status = NULL;
+char *myIp = NULL;
 const char *SELFIP = "127.0.0.1";
 
 void clear_stdin()
@@ -101,7 +102,7 @@ int connect_socket(int sock, const char *ip)
         perror("connect");
         return -1;
     }
-
+    myIp = inet_ntoa(addr.sin_addr);
     return 0;
 }
 
