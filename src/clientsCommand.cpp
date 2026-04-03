@@ -1,6 +1,7 @@
 #include "../headers/clientsCommand.hpp"
 #include "../headers/threadSafety.hpp"
 #include "../headers/Status_codes.hpp"
+#include "../headers/sockets.hpp"
 
 #include <math.h>
 #include <ctype.h>
@@ -36,19 +37,15 @@ void clear_stdin()
 
 char *sendToServer(const char *command, const char *IP)
 {
-    int sock = create_socket();
-    if (sock < 0)
-        return NULL;
-
-    if (connect_socket(sock, IP) < 0)
+    Socket socket;
+    if (!socket.connect_socket(IP))
     {
-        close(sock);
         return (char *)STATUS_MESSAGES[CONNECTION_ERROR];
     }
 
-    send(sock, command, strlen(command), 0);
+    socket.sendData(command, strlen(command));
 
-    int valread = read(sock, buffer, sizeof(buffer) - 1);
+    int valread = socket.receive(buffer, sizeof(buffer) - 1);
 
     if (valread > 0)
     {
@@ -57,54 +54,18 @@ char *sendToServer(const char *command, const char *IP)
         char *result = (char *)malloc(valread + 1);
         if (!result)
         {
-            close(sock);
             return NULL;
         }
 
         memcpy(result, buffer, valread + 1);
-        close(sock);
         return result;
     }
     else
     {
-        close(sock);
         return (char *)STATUS_MESSAGES[CONNECTION_ERROR];
     }
 }
 
-int create_socket(void)
-{
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0)
-    {
-        perror("socket");
-        return -1;
-    }
-    return sock;
-}
-
-int connect_socket(int sock, const char *ip)
-{
-    struct sockaddr_in addr;
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-
-    if (inet_pton(AF_INET, ip, &addr.sin_addr) <= 0)
-    {
-        perror("inet_pton");
-        return -1;
-    }
-
-    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        perror("connect");
-        return -1;
-    }
-    myIp = inet_ntoa(addr.sin_addr);
-    return 0;
-}
 
 // ================= HELPER =================
 

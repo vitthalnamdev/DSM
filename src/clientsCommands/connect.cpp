@@ -1,4 +1,5 @@
 #include "../../headers/clientsCommand.hpp"
+#include "../../headers/sockets.hpp"
 
 void handle_connect_client()
 {
@@ -14,19 +15,16 @@ void handle_connect_client()
     {
         ip_input[strcspn(ip_input, "\n")] = 0; // Remove the newline
     }
-    
-    int sock = create_socket();
-    
-    // connecting the sock with IP.
-    if (connect_socket(sock, ip_input) < 0)
+
+    Socket socket;
+    if (!socket.connect_socket(ip_input))
     {
         printf("Failed to connect to server at %s\n", ip_input);
-        close(sock);
         return;
     }
 
-   // TODO:  handle, the logic to ask the I.P that the user wants to connect with, if it wants to connect with my I.P.
-   // if yes , connect otherwise don't show.
+    // TODO:  handle, the logic to ask the I.P that the user wants to connect with, if it wants to connect with my I.P.
+    // if yes , connect otherwise don't show.
 
     // 2. Keep it open for multiple commands
     while (1)
@@ -39,10 +37,14 @@ void handle_connect_client()
             break;
 
         // Send command through the persistent socket
-        send(sock, command, strlen(command), 0);
+        if (socket.sendData(command, strlen(command)) < 0)
+        {
+            printf("Failed to send command.\n");
+            break;
+        }
 
         // Receive response
-        int valread = read(sock, buffer, sizeof(buffer) - 1);
+        int valread = socket.receive(buffer, sizeof(buffer) - 1);
         if (valread > 0)
         {
             buffer[valread] = '\0';
@@ -54,7 +56,4 @@ void handle_connect_client()
             break;
         }
     }
-
-    // 3. Close only when finished
-    close(sock);
 }

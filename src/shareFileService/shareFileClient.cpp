@@ -1,6 +1,7 @@
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
 #include "../../headers/clientsCommand.hpp"
+#include "../../headers/sockets.hpp"
 
 #define QUEUE_DEPTH 64
 #define BLOCK_SIZE_ 65536
@@ -72,18 +73,12 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     }
 
     // creating and connecting socket.
-    int sock = create_socket();
-    connect_socket(sock, IP);
+    Socket socket;
+    socket.connect_socket(IP);
 
-    if (sock < 0)
-    {
-        std::cerr << "Failed to create socket\n";
-        return -1;
-    }
+        const char *command = "shareFile";
 
-    const char *command = "shareFile";
-
-    if (!send_all_sync(sock, command, strlen(command)))
+    if (!send_all_sync(socket.getSockfd(), command, strlen(command)))
     {
         perror("Failed to send command");
         return -1;
@@ -95,7 +90,7 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     }
 
     char response[128];
-    int valread = read(sock, response, sizeof(response) - 1);
+    int valread = read(socket.getSockfd(), response, sizeof(response) - 1);
     response[valread] = '\0';
     if (strcmp(response, STATUS_MESSAGES[SUCCESS]) != 0)
     {
@@ -103,7 +98,7 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
         return -1;
     }
 
-    if (!send_all_sync(sock, &iscmdSendFile, sizeof(iscmdSendFile)))
+    if (!send_all_sync(socket.getSockfd(), &iscmdSendFile, sizeof(iscmdSendFile)))
     {
         perror("Failed to send");
         return -1;
@@ -122,11 +117,11 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
 
     int folderlen = strlen(folder);
 
-    if (!send_all_sync(sock, &folderlen, sizeof(folderlen)) ||
-        !send_all_sync(sock, folder, folderlen) ||
-        !send_all_sync(sock, &namelen, sizeof(namelen)) ||
-        !send_all_sync(sock, filename, namelen) ||
-        !send_all_sync(sock, &filesize, sizeof(filesize)))
+    if (!send_all_sync(socket.getSockfd(), &folderlen, sizeof(folderlen)) ||
+        !send_all_sync(socket.getSockfd(), folder, folderlen) ||
+        !send_all_sync(socket.getSockfd(), &namelen, sizeof(namelen)) ||
+        !send_all_sync(socket.getSockfd(), filename, namelen) ||
+        !send_all_sync(socket.getSockfd(), &filesize, sizeof(filesize)))
     {
         std::cerr << "Failed to send file metadata\n";
         close(file);
@@ -152,7 +147,7 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
         if (bytes == 0)
             break;
 
-        if (!send_all_uring(ring, sock, buffer, bytes))
+        if (!send_all_uring(ring, socket.getSockfd(), buffer, bytes))
         {
             std::cerr << "Failed to send file data\n";
             close(file);
@@ -167,7 +162,6 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     }
 
     close(file);
-    close(sock);
     if (iscmdSendFile)
     {
         ui.done();
