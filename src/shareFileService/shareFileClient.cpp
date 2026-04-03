@@ -2,55 +2,53 @@
 #include "../../headers/Status_codes.hpp"
 #include "../../headers/clientsCommand.hpp"
 #include "../../headers/sockets.hpp"
+#include "../../headers/threadSafety.hpp"
 
 #define QUEUE_DEPTH 64
 #define BLOCK_SIZE_ 65536
 
-int send_all_sync(int sock, const void *data, size_t len)
+int send_file_zero_copy(Socket *socket, int filefd, off_t start, off_t end,
+                        bool iscmdSendFile, TransferStats &stats, ProgressUI &ui)
+{
+    off_t offset = start;
+    ssize_t sent;
+
+    while (offset < end)
+    {
+        size_t remaining = end - offset;
+
+        // Limit chunk size (important for stability)
+        size_t chunk = remaining > 1 << 20 ? (1 << 20) : remaining; // 1MB chunks
+
+        sent = socket->sendFile(filefd, &offset, chunk);
+
+        if (sent <= 0)
+        {
+            perror("sendfile");
+            return -1;
+        }
+
+        if (iscmdSendFile)
+        {
+            stats.update(sent);
+            ui.render(stats);
+        }
+    }
+
+    return 1;
+}
+
+int send_all_sync(Socket *socket, const void *data, size_t len)
 {
     const char *ptr = static_cast<const char *>(data);
     while (len > 0)
     {
-        ssize_t sent = send(sock, ptr, len, 0);
+        ssize_t sent = socket->sendData(ptr, len);
         if (sent <= 0)
             return false;
         ptr += sent;
         len -= sent;
     }
-    return true;
-}
-
-int send_all_uring(io_uring &ring, int sock, const char *data, size_t len)
-{
-    size_t offset = 0;
-
-    while (offset < len)
-    {
-        io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-        if (!sqe)
-            return false;
-
-        io_uring_prep_send(sqe, sock, data + offset, len - offset, 0);
-
-        int ret = io_uring_submit(&ring);
-        if (ret < 0)
-            return false;
-
-        io_uring_cqe *cqe;
-        ret = io_uring_wait_cqe(&ring, &cqe);
-        if (ret < 0)
-            return false;
-
-        if (cqe->res <= 0)
-        {
-            io_uring_cqe_seen(&ring, cqe);
-            return false;
-        }
-
-        offset += cqe->res;
-        io_uring_cqe_seen(&ring, cqe);
-    }
-
     return true;
 }
 
@@ -76,11 +74,25 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     Socket socket;
     socket.connect_socket(IP);
 
-        const char *command = "shareFile";
+    const char *csend_all_syncommand = "shareFile";
 
-    if (!send_all_sync(socket.getSockfd(), command, strlen(command)))
+    if (!send_all_sync(&socket, csend_all_syncommand, strlen(csend_all_syncommand)))
     {
         perror("Failed to send command");
+        return -1;
+    }
+
+    char response[128];
+    int valread = socket.receive(response, sizeof(response) - 1);
+    if (valread <= 0)
+    {
+        perror("Failed to receive response");
+        return -1;
+    }
+    response[valread] = '\0';
+    if (strcmp(response, STATUS_MESSAGES[SUCCESS]) != 0)
+    {
+        printf("Server response: %s\n", response);
         return -1;
     }
 
@@ -89,26 +101,26 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
         printf("\n\n\t\tWait till the receiver accept the connection request............\n\n\n");
     }
 
-    char response[128];
-    int valread = read(socket.getSockfd(), response, sizeof(response) - 1);
-    response[valread] = '\0';
-    if (strcmp(response, STATUS_MESSAGES[SUCCESS]) != 0)
-    {
-        printf("Server response: %s\n", response);
-        return -1;
-    }
-
-    if (!send_all_sync(socket.getSockfd(), &iscmdSendFile, sizeof(iscmdSendFile)))
+    if (!send_all_sync(&socket, &iscmdSendFile, sizeof(iscmdSendFile)))
     {
         perror("Failed to send");
         return -1;
     }
 
-    io_uring ring;
-    int ret = io_uring_queue_init(QUEUE_DEPTH, &ring, 0);
-    if (ret < 0)
+    valread = socket.receive(response, sizeof(response) - 1);
+    if (valread <= 0)
     {
-        std::cerr << "io_uring_queue_init failed: " << strerror(-ret) << "\n";
+        perror("Failed to receive response");
+        return -1;
+    }
+    response[valread] = '\0';
+    if (strcmp(response, STATUS_MESSAGES[SUCCESS]) == 0)
+    {
+        printf("\t\nClient accepted connection\n");
+    }
+    else
+    {
+        printf("\t\nClient rejected connection\n");
         return -1;
     }
 
@@ -117,11 +129,11 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
 
     int folderlen = strlen(folder);
 
-    if (!send_all_sync(socket.getSockfd(), &folderlen, sizeof(folderlen)) ||
-        !send_all_sync(socket.getSockfd(), folder, folderlen) ||
-        !send_all_sync(socket.getSockfd(), &namelen, sizeof(namelen)) ||
-        !send_all_sync(socket.getSockfd(), filename, namelen) ||
-        !send_all_sync(socket.getSockfd(), &filesize, sizeof(filesize)))
+    if (!send_all_sync(&socket, &folderlen, sizeof(folderlen)) ||
+        !send_all_sync(&socket, folder, folderlen) ||
+        !send_all_sync(&socket, &namelen, sizeof(namelen)) ||
+        !send_all_sync(&socket, filename, namelen) ||
+        !send_all_sync(&socket, &filesize, sizeof(filesize)))
     {
         std::cerr << "Failed to send file metadata\n";
         close(file);
@@ -134,38 +146,17 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     if (iscmdSendFile)
         stats.start(filesize);
 
-    char buffer[BLOCK_SIZE_];
-    while (true)
+    if (send_file_zero_copy(&socket, file, 0, filesize,
+                            iscmdSendFile, stats, ui) < 0)
     {
-        ssize_t bytes = read(file, buffer, sizeof(buffer));
-        if (bytes < 0)
-        {
-            perror("read");
-            close(file);
-            return -1;
-        }
-        if (bytes == 0)
-            break;
-
-        if (!send_all_uring(ring, socket.getSockfd(), buffer, bytes))
-        {
-            std::cerr << "Failed to send file data\n";
-            close(file);
-            return -1;
-        }
-
-        if (iscmdSendFile)
-        {
-            stats.update(bytes);
-            ui.render(stats);
-        }
+        std::cerr << "Failed to send file using sendfile\n";
+        close(file);
+        return -1;
     }
 
-    close(file);
     if (iscmdSendFile)
     {
         ui.done();
     }
-    io_uring_queue_exit(&ring);
     return 1;
 }

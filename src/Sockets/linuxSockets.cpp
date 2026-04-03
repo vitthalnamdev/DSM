@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
+#include <sys/sendfile.h>
 
 Socket::Socket()
 {
@@ -49,6 +50,11 @@ int Socket::sendData(const char *data, size_t len)
 int Socket::receive(char *buffer, size_t len)
 {
     return recv(sockfd, buffer, len, 0);
+}
+
+int Socket::sendFile(int filefd , off_t *offset , size_t chunk){
+    int sent = sendfile(sockfd, filefd, offset, chunk);
+    return sent;
 }
 
 void Socket::close()

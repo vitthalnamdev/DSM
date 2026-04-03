@@ -25,4 +25,5 @@ public:
     void close();
     socket_t getSockfd() const { return sockfd; }
     const char *getMyIp() const { return myIp; }
+    int sendFile(int filefd, off_t *offset, size_t chunk);
 };

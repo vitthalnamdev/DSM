@@ -15,7 +15,6 @@ void handle_send_file()
         return;
     }
     IP[strcspn(IP, "\n")] = 0;
-    clear_stdin();
 
     printf("Enter the file path that you want to share: ");
 
