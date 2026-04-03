@@ -47,10 +47,6 @@ struct distributiveComputingargs
 
 char *sendToServer(const char *command, const char *IP);
 
-// int create_socket(void);
-
-// int connect_socket(int sock, const char *ip);
-
 void handle_exit();
 
 void handle_connect_client();

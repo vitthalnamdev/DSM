@@ -1,17 +1,18 @@
 #include "../../headers/serverService.hpp"
 #include "../../headers/Status_codes.hpp"
+#include "../../headers/sockets.hpp"
 
 void *handle_status_check(void *arg)
 {
-    int sock = *(int *)arg;
+    Socket socket = *(Socket *)arg;
     if(OPEN_RECEIVE_FILE_CONNECTION)
     {
-        send(sock, STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION], strlen(STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]), 0);
+        socket.sendData(STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION], strlen(STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]));
     }
     else
     {
-        send(sock, STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]), 0);
+        socket.sendData(STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]));
     }
-    close(sock);
+    delete (Socket *)arg;
     return NULL;
 }
