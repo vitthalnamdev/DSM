@@ -2,26 +2,20 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <liburing.h>
 #include <sys/stat.h>
 #include <cstring>
 #include <chrono>
 #include <iomanip>
-#include <sys/socket.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <io.h>
 #define write_fd _write
-using ssize_t = int;
 #else
 #include <unistd.h>
 #define write_fd write
 #endif
 
 int send_all_sync(int sock, const void *data, size_t len);
-
-int send_all_uring(io_uring &ring, int sock, const char *data, size_t len);
 
 int send_file(const char *filename, const char *IP, const char *folder, const bool iscmdSendFile);
 

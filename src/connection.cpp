@@ -2,36 +2,15 @@
 #include "../headers/clientsCommand.hpp"
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
-
+#include "../headers/sockets.hpp"
 
 void connection()
 {
-    int server_fd;
-    struct sockaddr_in address;
-    int opt = 1;
-
-    // 1. Setup Socket
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    Socket socket;
+    int server_fd = socket.setupSocket();
+    if (server_fd < 0)
     {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(8080);
-
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
-    {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(server_fd, 10) < 0)
-    {
-        perror("listen");
+        printf("Socket Error");
         exit(EXIT_FAILURE);
     }
 

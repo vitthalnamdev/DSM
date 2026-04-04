@@ -1,6 +1,12 @@
 #pragma once
 #include <iostream>
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#endif
+
 class Socket
 {
 private:
@@ -23,6 +29,7 @@ public:
     int sendFile(int filefd, off_t *offset, size_t chunk);
     int acceptConnection(int server_fd);
     void close();
+    int setupSocket();
 
     socket_t getSockfd() const { return sockfd; }
 
