@@ -1,6 +1,7 @@
 #include "../../headers/serverService.hpp"
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
+#include "../../headers/sockets.hpp"
 
 #define PORT 8080
 #define BLOCK_SIZE_ 65536
@@ -23,13 +24,13 @@ void create_dirs(const char *path)
 }
 
 // Receive exactly len bytes from socket
-int recv_all(int sock, void *buf, size_t len)
+int recv_all(Socket *socket, void *buf, size_t len)
 {
     char *ptr = static_cast<char *>(buf);
 
     while (len > 0)
     {
-        ssize_t bytes = recv(sock, ptr, len, 0);
+        ssize_t bytes = socket->receive(ptr, len);
 
         // Stop on socket error or close
         if (bytes <= 0)
@@ -43,14 +44,14 @@ int recv_all(int sock, void *buf, size_t len)
 }
 
 // Receive file metadata and file data
-void receive_file(int sock, u_int8_t askclientShareFile)
+void receive_file(Socket *socket, u_int8_t askclientShareFile)
 {
     uint32_t namelen;
 
     uint32_t folderlen;
 
     // Receive folder length
-    if (!recv_all(sock, &folderlen, sizeof(folderlen)))
+    if (!recv_all(socket, &folderlen, sizeof(folderlen)))
     {
         std::cerr << "Failed to receive folder length\n";
         return;
@@ -66,7 +67,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
     char folder[256];
 
     // Receive folder name
-    if (!recv_all(sock, folder, folderlen))
+    if (!recv_all(socket, folder, folderlen))
     {
         std::cerr << "Failed to receive folder name\n";
         return;
@@ -74,7 +75,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
 
     folder[folderlen] = '\0';
 
-    if (!recv_all(sock, &namelen, sizeof(namelen)))
+    if (!recv_all(socket, &namelen, sizeof(namelen)))
     {
         std::cerr << "Failed to receive filename length\n";
         return;
@@ -90,7 +91,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
     char filename[256];
 
     // Read filename
-    if (!recv_all(sock, filename, namelen))
+    if (!recv_all(socket, filename, namelen))
     {
         std::cerr << "Failed to receive filename\n";
         return;
@@ -102,7 +103,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
     uint64_t filesize;
 
     // Read file size
-    if (!recv_all(sock, &filesize, sizeof(filesize)))
+    if (!recv_all(socket, &filesize, sizeof(filesize)))
     {
         std::cerr << "Failed to receive filesize\n";
         return;
@@ -177,7 +178,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
             need = sizeof(buffer);
 
         // Read file chunk from socket
-        ssize_t bytes = recv(sock, buffer, need, 0);
+        ssize_t bytes = socket->receive(buffer, need);
         if (bytes <= 0)
         {
             std::cerr << "Socket closed or recv failed while receiving file data\n";
@@ -185,7 +186,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
         }
 
         // Write chunk to file
-        ssize_t written = write(file, buffer, bytes);
+        ssize_t written = write_fd(file, buffer, bytes);
         if (written != bytes)
         {
             perror("write");
@@ -221,7 +222,7 @@ void receive_file(int sock, u_int8_t askclientShareFile)
         const char *msg = "SUCCESS";
 
         // Send success reply to client
-        send(sock, msg, strlen(msg), 0);
+        socket->sendData(msg, strlen(msg));
     }
     else
     {
@@ -238,32 +239,30 @@ bool checkChar(char choice)
 
 void *handle_share_file_server(void *arg)
 {
-    int sock = *(int *)arg;
+    Socket *client_socket = static_cast<Socket *>(arg);
     if (OPEN_RECEIVE_FILE_CONNECTION == 0)
     {
-        send(sock, STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION],
-             strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]), 0);
-        close(sock);
+        client_socket->sendData(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION], strlen(STATUS_MESSAGES[RECEIVER_NO_OPEN_CONNECTION]));
+        delete client_socket;
         return NULL;
     }
     else
     {
-        send(sock, STATUS_MESSAGES[SUCCESS],
-             strlen(STATUS_MESSAGES[SUCCESS]), 0);
+        client_socket->sendData(STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]));
     }
 
     uint8_t askClientShareFile;
-    if (!recv_all(sock, &askClientShareFile, sizeof(askClientShareFile)))
+    if (!recv_all(client_socket, &askClientShareFile, sizeof(askClientShareFile)))
     {
         std::cerr << "Failed to receive data from the client\n";
-        close(sock);
+        delete client_socket;
         return NULL;
     }
 
     if (!askClientShareFile)
     {
-        receive_file(sock, askClientShareFile);
-        close(sock);
+        receive_file(client_socket, askClientShareFile);
+        delete client_socket;
         return NULL;
     }
 
@@ -289,16 +288,14 @@ void *handle_share_file_server(void *arg)
 
     if (choice == 'a' || choice == 'A')
     {
-        send(sock, STATUS_MESSAGES[SUCCESS],
-             strlen(STATUS_MESSAGES[SUCCESS]), 0);
+        client_socket->sendData(STATUS_MESSAGES[SUCCESS], strlen(STATUS_MESSAGES[SUCCESS]));
 
-        receive_file(sock, askClientShareFile);
+        receive_file(client_socket, askClientShareFile);
     }
     else
     {
-        send(sock, STATUS_MESSAGES[REJECT_CONNECTION],
-             strlen(STATUS_MESSAGES[REJECT_CONNECTION]), 0);
+        client_socket->sendData(STATUS_MESSAGES[REJECT_CONNECTION], strlen(STATUS_MESSAGES[REJECT_CONNECTION]));
     }
-    close(sock);
+    delete client_socket;
     return NULL;
 }
