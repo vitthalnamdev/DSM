@@ -8,7 +8,7 @@ void *server_listener_thread_tcp(void *args)
     struct server_args *s_args = (struct server_args *)args;
     while (1)
     {
-        Socket *socket = new Socket(0);
+        Socket *socket = new Socket(1);
         socket->acceptConnection(s_args->server_fd);
 
         char buffer[256];

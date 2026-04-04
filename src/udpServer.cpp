@@ -2,6 +2,7 @@
 #include "../headers/serverService.hpp"
 #include "../headers/threadSafety.hpp"
 #include "../headers/clientsCommand.hpp"
+#include "../headers/sockets.hpp"
 
 void *udp_discovery_responder(void *arg)
 {

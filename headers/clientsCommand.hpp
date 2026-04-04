@@ -4,11 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <sys/time.h>
-#include <sys/select.h>
-#include <termios.h>
 #include <signal.h>
 
 typedef void (*client_command_handler_t)();
@@ -24,7 +20,7 @@ typedef struct
 
 #define IP_LENGTH INET_ADDRSTRLEN
 #define PORT 8080 // Ensure your server is listening on this UDP port
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 8192
 #define TOTAL_IPS 300
 
 extern char buffer[BUFFER_SIZE];

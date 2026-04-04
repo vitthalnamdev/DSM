@@ -1,4 +1,5 @@
 #include "../../headers/clientsCommand.hpp"
+#include "../../headers/sockets.hpp"
 
 void sendRequest()
 {
@@ -14,7 +15,7 @@ void sendRequest()
     }
 
     // 2. Enable Broadcast permission on the socket
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0)
+    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcast_enable, sizeof(broadcast_enable)) < 0)
     {
         perror("Setsockopt (SO_BROADCAST) failed");
         close(sock);
@@ -22,10 +23,8 @@ void sendRequest()
     }
 
     // 3. Set a Timeout (So we don't wait forever if no one responds)
-    struct timeval tv;
-    tv.tv_sec = 1; // Wait 1 second for replies
-    tv.tv_usec = 0;
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+    int timeout = 1000; // Wait 1 second for replies (in milliseconds)
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) < 0)
     {
         perror("Setsockopt (SO_RCVTIMEO) failed");
     }

@@ -2,6 +2,7 @@
 #include "../../headers/shareFile.hpp"
 #include "../../headers/Status_codes.hpp"
 #include "../../headers/sockets.hpp"
+#include <direct.h>
 
 #define PORT 8080
 #define BLOCK_SIZE_ 65536
@@ -16,11 +17,11 @@ void create_dirs(const char *path)
         if (*p == '/')
         {
             *p = '\0';
-            mkdir(temp, 0755);
+            _mkdir(temp);
             *p = '/';
         }
     }
-    mkdir(temp, 0755);
+    _mkdir(temp);
 }
 
 // Receive exactly len bytes from socket
@@ -44,7 +45,7 @@ int recv_all(Socket *socket, void *buf, size_t len)
 }
 
 // Receive file metadata and file data
-void receive_file(Socket *socket, u_int8_t askclientShareFile)
+void receive_file(Socket *socket, int askclientShareFile)
 {
     uint32_t namelen;
 
@@ -118,7 +119,7 @@ void receive_file(Socket *socket, u_int8_t askclientShareFile)
     }
 
     // Create base folder
-    mkdir("received_files", 0755);
+    _mkdir("received_files");
 
     // Security check
     if (strstr(folder, ".."))
