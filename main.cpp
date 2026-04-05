@@ -4,14 +4,20 @@
 
 int main()
 {
-// #ifdef defined(WIN_32) || defined(WIN_64)
+#if defined(_WIN32)
     WSADATA wsa;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
-// #endif
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+    {
+        fprintf(stderr, "WSAStartup failed\n");
+        return 1;
+    }
+#endif
+
     connection();
-// #ifdef defined(WIN_32) || defined(WIN_64)
+
+#if defined(_WIN32)
     WSACleanup();
-// #endif
+#endif
 
     return 0;
 }
