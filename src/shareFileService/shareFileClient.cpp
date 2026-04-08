@@ -7,7 +7,7 @@
 #define QUEUE_DEPTH 64
 #define BLOCK_SIZE_ 65536
 
-int send_file_zero_copy(TCP *socket, int filefd, off_t start, off_t end,
+int send_file_zero_copy(TCP *socket, int filefd, off_t start, int_fast64_t end,
                         bool iscmdSendFile, TransferStats &stats, ProgressUI &ui)
 {
     off_t offset = start;
@@ -52,7 +52,7 @@ int send_all_sync(TCP *socket, const void *data, size_t len)
     return true;
 }
 
-int send_file(const char *filename, const char *IP, const char *folder, const bool iscmdSendFile)
+int send_file(const char *filename, const char *IP, const char *folder, const bool iscmdSendFile = 0, off_t offset, int_fast64_t chunk)
 {
 
     int file = open(filename, O_RDONLY);
@@ -124,7 +124,16 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
         return -1;
     }
 
-    uint64_t filesize = st.st_size;
+    int_fast64_t filesize;
+    if (chunk == (int_fast64_t)-1)
+    {
+        filesize = st.st_size;
+    }
+    else
+    {
+        filesize = chunk;
+    }
+
     uint32_t namelen = strlen(filename);
 
     int folderlen = strlen(folder);
@@ -146,7 +155,7 @@ int send_file(const char *filename, const char *IP, const char *folder, const bo
     if (iscmdSendFile)
         stats.start(filesize);
 
-    if (send_file_zero_copy(&socket, file, 0, filesize,
+    if (send_file_zero_copy(&socket, file, offset, offset + filesize,
                             iscmdSendFile, stats, ui) < 0)
     {
         std::cerr << "Failed to send file using sendfile\n";

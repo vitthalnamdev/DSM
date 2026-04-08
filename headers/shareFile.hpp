@@ -25,7 +25,7 @@
 
 int send_all_sync(int sock, const void *data, size_t len);
 
-int send_file(const char *filename, const char *IP, const char *folder, const bool iscmdSendFile);
+int send_file(const char *filename, const char *IP, const char *folder, const bool iscmdSendFile, off_t offset = 0, int_fast64_t chunk = -1);
 
 int recv_all(int sock, void *buf, size_t len);
 

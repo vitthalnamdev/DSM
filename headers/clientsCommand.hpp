@@ -39,6 +39,8 @@ struct distributiveComputingargs
 {
     char *codePath;
     char *trainFilePath;
+    off_t train_offset;
+    size_t train_chunk_size;
     char *IP;
 };
 
