@@ -5,9 +5,12 @@
 
 off_t *train_offset;
 int_fast64_t *train_chunk_size;
+
 char reducerPath[128] = "/home/vitthal/dsm/src/clientsCommands/DistributiveComputing/Reducers/sum.cpp";
 
-int findTotatConnections()
+// ---------------------- UTIL ----------------------
+
+int findTotalConnections()
 {
     int connections = 0;
     while (ip_list[connections] != NULL)
@@ -23,25 +26,22 @@ void freeMemory()
         free(ip_status[i]);
     }
     free(ip_list);
+    free(ip_status);
     free(train_offset);
     free(train_chunk_size);
-    free(ip_status);
 }
 
 int_fast64_t getFileSize(const char *filePath)
 {
     struct stat st;
-
     if (stat(filePath, &st) == 0)
-    {
         return st.st_size;
-    }
-    else
-    {
-        perror("Failed to get file size");
-        return -1;
-    }
+
+    perror("Failed to get file size");
+    return -1;
 }
+
+// ---------------------- SAFE LINE ALIGNMENT ----------------------
 
 int_fast64_t adjustToNextLine(int fd, int_fast64_t pos, int_fast64_t fileSize)
 {
@@ -51,7 +51,9 @@ int_fast64_t adjustToNextLine(int fd, int_fast64_t pos, int_fast64_t fileSize)
     const size_t BUF_SIZE = 4096;
     char buffer[BUF_SIZE];
 
-    while (pos < fileSize)
+    int_fast64_t start = pos;
+
+    while (pos < fileSize && pos - start < BUF_SIZE * 4) // LIMIT scanning
     {
         ssize_t bytesRead = pread(fd, buffer, BUF_SIZE, pos);
         if (bytesRead <= 0)
@@ -60,16 +62,17 @@ int_fast64_t adjustToNextLine(int fd, int_fast64_t pos, int_fast64_t fileSize)
         for (ssize_t i = 0; i < bytesRead; i++)
         {
             if (buffer[i] == '\n')
-            {
-                return pos + i + 1; // next line start
-            }
+                return pos + i + 1;
         }
 
         pos += bytesRead;
     }
 
-    return fileSize;
+    // fallback (don’t let it eat whole file)
+    return start;
 }
+
+// ---------------------- CORE LOGIC ----------------------
 
 void divideFileIntoChunks(const char *trainfilepath, int totalConnections)
 {
@@ -88,27 +91,37 @@ void divideFileIntoChunks(const char *trainfilepath, int totalConnections)
         return;
     }
 
-    int_fast64_t offset = 0;
+    // ✅ Compute total weight correctly
+    int totalWeight = 0;
+    for (int i = 0; i < totalConnections; i++)
+    {
+        totalWeight += (i == 0) ? 3 : 1;
+    }
 
-    // total weight = (n-1)*1 + 3
-    int totalWeight = (totalConnections - 1) + 3;
+    int_fast64_t offset = 0;
 
     for (int i = 0; i < totalConnections; i++)
     {
-        int currWeight = (strcmp(ip_list[i], myIp) == 0) ? 3 : 1;
+        int currWeight = (i == 0) ? 3 : 1;
 
-        int_fast64_t chunk = (fileSize * currWeight) / totalWeight;
-
-        int_fast64_t tentative_end = offset + chunk;
+        int_fast64_t ideal_chunk = (fileSize * currWeight) / totalWeight;
+        int_fast64_t tentative_end = offset + ideal_chunk;
         int_fast64_t adjusted_end;
 
         if (i == totalConnections - 1)
         {
-            adjusted_end = fileSize; // last node gets all remaining
+            // last node gets remaining
+            adjusted_end = fileSize;
         }
         else
         {
             adjusted_end = adjustToNextLine(fd, tentative_end, fileSize);
+
+            // safeguard: don’t exceed too much
+            if (adjusted_end <= offset || adjusted_end > tentative_end + ideal_chunk)
+            {
+                adjusted_end = tentative_end;
+            }
         }
 
         int_fast64_t final_chunk = adjusted_end - offset;
@@ -122,9 +135,10 @@ void divideFileIntoChunks(const char *trainfilepath, int totalConnections)
     close(fd);
 }
 
+// ---------------------- THREAD HANDLING ----------------------
+
 void *send_file_thread(send_file_args fargs)
 {
-
     int result;
 
     if (fargs.use_chunk)
@@ -151,32 +165,32 @@ void *send_file_thread(send_file_args fargs)
 void *distributiveComputingOverNetwork(void *args)
 {
     auto *dis_args = static_cast<distributiveComputingargs *>(args);
-    const char *command = "distributiveComputing";
 
-    char *res = sendToServer(command, dis_args->IP);
+    char *res = sendToServer("distributiveComputing", dis_args->IP);
 
     if (strcmp(res, STATUS_MESSAGES[OPEN_SHAREFILE_CONNECTION]) != 0)
     {
-        printf("Failed to open connection for distributive computing on IP: %s\n", dis_args->IP);
+        printf("Connection failed for IP: %s\n", dis_args->IP);
         return NULL;
     }
 
+    printf("Network → Offset: %ld, Size: %ld\n",
+           dis_args->train_offset,
+           dis_args->train_chunk_size);
+
     const bool iscmdSendFile = false;
 
-    // Prepare arguments
     send_file_args code_args{
         dis_args->codePath,
         dis_args->IP,
         "code",
-        iscmdSendFile
-    };
+        iscmdSendFile};
 
     send_file_args reducer_args{
         reducerPath,
         dis_args->IP,
         "reducer",
-        iscmdSendFile
-    };
+        iscmdSendFile};
 
     send_file_args train_args{
         dis_args->trainFilePath,
@@ -185,15 +199,12 @@ void *distributiveComputingOverNetwork(void *args)
         iscmdSendFile,
         dis_args->train_offset,
         dis_args->train_chunk_size,
-        true
-    };
+        true};
 
-    // Launch threads
     std::thread t1(send_file_thread, code_args);
     std::thread t2(send_file_thread, reducer_args);
     std::thread t3(send_file_thread, train_args);
 
-    // Join threads
     t1.join();
     t2.join();
     t3.join();
@@ -203,54 +214,53 @@ void *distributiveComputingOverNetwork(void *args)
 
 void *distributiveComputingLocal(void *args)
 {
-    struct distributiveComputingargs *dis_args = (struct distributiveComputingargs *)args;
-    const char *codepath = dis_args->codePath;
-    const char *trainfilepath = dis_args->trainFilePath;
-    off_t offset = dis_args->train_offset;
-    size_t chunk_size = dis_args->train_chunk_size;
-    // Now, the problem is how to execute the code on the train file chunk..
+    auto *dis_args = (distributiveComputingargs *)args;
+
+    // TODO: execute locally on chunk
+    printf("LOCAL EXEC → IP: %s, Offset: %ld, Size: %ld\n",
+           dis_args->IP,
+           dis_args->train_offset,
+           dis_args->train_chunk_size);
+
     return NULL;
 }
 
+// ---------------------- MAIN HANDLER ----------------------
+
 void handle_distributive_systems()
 {
-    // Send UDP packet to all the IP's in the network, to know which IP's are actually running the service.
     sendRequest();
 
-    int totalConnections = findTotatConnections();
+    int totalConnections = findTotalConnections();
 
     train_offset = (off_t *)malloc(sizeof(off_t) * totalConnections);
     train_chunk_size = (int_fast64_t *)malloc(sizeof(int_fast64_t) * totalConnections);
 
-    printf("Enter the code file path: ");
-    char codepath[128];
-    if (!fgets(codepath, sizeof(codepath), stdin))
-    {
-        perror("Failed to read codepath");
-        return;
-    }
+    char codepath[128], trainfilepath[128];
+
+    printf("Enter code path: ");
+    fgets(codepath, sizeof(codepath), stdin);
     codepath[strcspn(codepath, "\n")] = 0;
 
-    char trainfilepath[128];
-
-    printf("Enter the train file path: ");
-    if (!fgets(trainfilepath, sizeof(trainfilepath), stdin))
-    {
-        perror("Failed to read trainfilepath");
-        return;
-    }
+    printf("Enter train file path: ");
+    fgets(trainfilepath, sizeof(trainfilepath), stdin);
     trainfilepath[strcspn(trainfilepath, "\n")] = 0;
 
     divideFileIntoChunks(trainfilepath, totalConnections);
 
-    // Make threads equal to totalConnections.
+    // Debug output
+    for (int i = 0; i < totalConnections; i++)
+    {
+        printf("IP: %s | Offset: %ld | Chunk: %ld\n",
+               ip_list[i], train_offset[i], train_chunk_size[i]);
+    }
 
     std::thread threads[totalConnections];
 
+
     for (int i = 0; i < totalConnections; i++)
     {
-        struct distributiveComputingargs *dis_args =
-            (struct distributiveComputingargs *)malloc(sizeof(struct distributiveComputingargs));
+        auto *dis_args = (distributiveComputingargs *)malloc(sizeof(distributiveComputingargs));
 
         dis_args->codePath = codepath;
         dis_args->trainFilePath = trainfilepath;
@@ -258,21 +268,14 @@ void handle_distributive_systems()
         dis_args->train_offset = train_offset[i];
         dis_args->train_chunk_size = train_chunk_size[i];
 
-        // if (strcmp(ip_list[i], myIp) == 0)
-        // {
-        //     threads[i] = std::thread(distributiveComputingLocal, dis_args);
-        // }
-        // else
-        // {
-        threads[i] = std::thread(distributiveComputingOverNetwork, dis_args);
-        // }
+        if (i == 0)
+            threads[i] = std::thread(distributiveComputingLocal, dis_args);
+        else
+            threads[i] = std::thread(distributiveComputingOverNetwork, dis_args);
     }
 
-    // Starting each thread..
     for (int i = 0; i < totalConnections; i++)
-    {
         threads[i].join();
-    }
 
     freeMemory();
 }

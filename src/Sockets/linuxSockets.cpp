@@ -96,7 +96,19 @@ bool Socket::connect_socket(const char *ip)
         perror("connect");
         return false;
     }
-    myIp = (inet_ntoa(addr.sin_addr));
+
+    struct sockaddr_in local_addr;
+    socklen_t len = sizeof(local_addr);
+
+    if (getsockname(sockfd, (struct sockaddr *)&local_addr, &len) == -1)
+    {
+        perror("getsockname");
+        return false;
+    }
+
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &local_addr.sin_addr, ip_str, sizeof(ip_str));
+
     return true;
 }
 

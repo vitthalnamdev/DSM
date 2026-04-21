@@ -28,7 +28,7 @@ extern char buffer[BUFFER_SIZE];
 extern char command[BUFFER_SIZE];
 
 extern const char *SELFIP;
-extern char *myIp;
+ 
 const int MAX_IPS = 300;
 extern char **ip_list;   // Global variable to store the list of IPs
 extern char **ip_status; // Global variable to store the list of IPs that responded to status command

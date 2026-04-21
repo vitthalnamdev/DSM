@@ -65,8 +65,6 @@ bool Socket::connect_socket(const char *ip)
         std::cerr << "connect error: " << WSAGetLastError() << std::endl;
         return false;
     }
-
-    myIp = inet_ntoa(addr.sin_addr);
     return true;
 }
 
